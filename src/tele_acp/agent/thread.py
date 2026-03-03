@@ -169,4 +169,12 @@ class AgentThread:
 
     async def _finish_turn(self) -> None:
         async with self._message_lock:
+            if self.message is None:
+                return
+
+            final = self.message.model_copy(deep=True)
+            final.in_turn = False
+
             self.message = None
+
+        await self.outbound_send.send(final)

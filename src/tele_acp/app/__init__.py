@@ -129,22 +129,27 @@ class APP:
         dialog_id = peer_hash_into_str(peer)
 
         limiter = Throttler(rate_limit=1)
+        # TODO: add lock
+        sending: telethon.types.Message | None = None
+
         async with outbound_recv:
             async for message in outbound_recv:
 
                 async def _sending(peer: telethon.types.TypePeer = peer, message: OutBoundMessage = message):
-                    content = ""
+                    nonlocal sending
                     match message:
                         case str():
-                            content = message
+                            sending = None
+                            await self._tele_client.send_message(peer, message)
                         case AcpMessage():
-                            content = message.markdown()
-                    if content == "":
-                        return
+                            text = message.markdown()
+                            if sending is not None:
+                                await self._tele_client.edit_message(peer, sending.id, text)
+                            else:
+                                sending = await self._tele_client.send_message(peer, text)
+                            if not message.in_turn:
+                                sending = None
 
-                    await self._tele_client.send_message(peer, content)
-
-                # TODO: how to edit messages?
                 await limiter.call(_sending)
 
     async def _run_dialog_lifecycle(

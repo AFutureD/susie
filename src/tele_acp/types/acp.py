@@ -18,6 +18,7 @@ class AcpMessage(BaseModel):
     model: acp.schema.CurrentModeUpdate | None
     chunks: list[AcpMessageChunk] = []
     usage: acp.schema.UsageUpdate | None
+    in_turn: bool = True
 
     def markdown(self) -> str:
         def content_text(content: object) -> str:
