@@ -6,11 +6,12 @@ import acp
 from acp import schema
 from anyio.streams.memory import MemoryObjectSendStream
 
-from tele_acp.types import unreachable
+from tele_acp.types import AcpMessageChunk, unreachable
+from tele_acp.types.acp import AcpMessage
 
 
 class ACPClient(acp.Client):
-    def __init__(self, outbound_send: MemoryObjectSendStream[str], logger: logging.Logger) -> None:
+    def __init__(self, outbound_send: MemoryObjectSendStream[AcpMessageChunk], logger: logging.Logger) -> None:
         self._outbound_queue = outbound_send
         self._logger = logger
 
@@ -115,30 +116,19 @@ class ACPClient(acp.Client):
 
     async def handle_agent_message_chunk(self, session_id: str, update: schema.AgentMessageChunk | schema.AgentThoughtChunk) -> None:
         _ = session_id, update
-
-        if isinstance(update, schema.AgentMessageChunk):
-            content = update.content
-
-            match content:
-                case schema.TextContentBlock():
-                    await self._outbound_queue.send(content.text)
-                case schema.ImageContentBlock():
-                    pass
-                case schema.AudioContentBlock():
-                    pass
-                case schema.ResourceContentBlock():
-                    pass
-                case schema.EmbeddedResourceContentBlock():
-                    pass
+        await self._outbound_queue.send(update)
 
     async def handle_tool_call_start(self, session_id: str, update: schema.ToolCallStart) -> None:
         _ = session_id, update
+        await self._outbound_queue.send(update)
 
     async def handle_tool_call_progress(self, session_id: str, update: schema.ToolCallProgress) -> None:
         _ = session_id, update
+        await self._outbound_queue.send(update)
 
     async def handle_agent_plan_update(self, session_id: str, update: schema.AgentPlanUpdate) -> None:
         _ = session_id, update
+        await self._outbound_queue.send(update)
 
     async def handle_available_commands_update(self, session_id: str, update: schema.AvailableCommandsUpdate) -> None:
         _ = session_id, update

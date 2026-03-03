@@ -66,7 +66,7 @@ def auth_login(
         return typer.prompt("Please enter your password", type=str, hide_input=True)
 
     async def _run() -> bool:
-        tg = await TGClient.create(
+        tg = TGClient.create(
             session_name=cli_args.session,
             config=load_config(config_file=cli_args.config_file),
             with_current=False,
@@ -93,7 +93,7 @@ def auth_logout(ctx: typer.Context):
     cli_args: SharedArgs = ctx.obj
 
     async def _run() -> bool:
-        tg = await TGClient.create(session_name=cli_args.session, config=load_config(config_file=cli_args.config_file))
+        tg = TGClient.create(session_name=cli_args.session, config=load_config(config_file=cli_args.config_file))
 
         me = await tg.logout()
         if me:
@@ -115,7 +115,7 @@ def auth_list(ctx: typer.Context):
 
         session_info_list = []
         for session_name in session_name_list:
-            tg = await TGClient.create(session_name=session_name, config=config)
+            tg = TGClient.create(session_name=session_name, config=config)
             async with tg as tg:
                 session_info = await tg.get_session_info()
             if session_info is None:
@@ -140,7 +140,7 @@ def auth_authorizations(ctx: typer.Context):
     cli_args: SharedArgs = ctx.obj
 
     async def _run() -> bool:
-        app = await TGClient.create(session_name=cli_args.session, config=load_config(config_file=cli_args.config_file))
+        app = TGClient.create(session_name=cli_args.session, config=load_config(config_file=cli_args.config_file))
         authorizations = await app.get_authorizations()
         print(utils.fmt.format_authorizations(authorizations, cli_args.fmt), fmt=cli_args.fmt)
         return True

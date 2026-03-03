@@ -4,6 +4,8 @@ from contextlib import suppress
 from dataclasses import dataclass
 
 import anyio
+from tele_acp.types.acp import AcpMessage
+from tele_acp.utils.throttle import Throttler
 import telethon
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from telethon import events
@@ -13,14 +15,14 @@ from tele_acp.acp import ACPAgentConfig
 from tele_acp.agent import AgentThread
 from tele_acp.mcp import MCP
 from tele_acp.telegram import TGClient
-from tele_acp.types import peer_hash_into_str
+from tele_acp.types import OutBoundMessage, peer_hash_into_str
 from tele_acp.types.config import Config
 
 
 @dataclass
 class DialogContext:
     inbound_send: MemoryObjectSendStream[Message]
-    outbound_recv: MemoryObjectReceiveStream[str | None]
+    outbound_recv: MemoryObjectReceiveStream[OutBoundMessage]
     outbound_consumer_task: asyncio.Task[None] | None
     lifecycle_task: asyncio.Task[None] | None
     last_activity_ts: float
@@ -80,12 +82,13 @@ class APP:
         await self.dispatch_tele_message(message)
 
     async def dispatch_tele_message(self, message: Message):
-        dialog_id = peer_hash_into_str(message.peer_id)
-        ctx = await self._get_or_create_dialog(dialog_id)
+        ctx = await self._get_or_create_dialog(message.peer_id)
         ctx.last_activity_ts = asyncio.get_running_loop().time()
         await ctx.inbound_send.send(message)
 
-    async def _get_or_create_dialog(self, dialog_id: str) -> DialogContext:
+    async def _get_or_create_dialog(self, peer: telethon.types.TypePeer) -> DialogContext:
+        dialog_id = peer_hash_into_str(peer)
+
         async with self._dialog_dict_lock:
             existing = self._dialog_ctx.get(dialog_id)
             if existing:
@@ -94,9 +97,9 @@ class APP:
             loop = asyncio.get_running_loop()
 
             inbound_send, inbound_recv = anyio.create_memory_object_stream[Message](0)
-            outbound_send, outbound_recv = anyio.create_memory_object_stream[str | None](0)
+            outbound_send, outbound_recv = anyio.create_memory_object_stream[OutBoundMessage](0)
 
-            outbound_consumer_task = loop.create_task(self._consume_outbound(dialog_id, outbound_recv))
+            outbound_consumer_task = loop.create_task(self._consume_outbound(peer, outbound_recv))
             lifecycle_task = loop.create_task(self._run_dialog_lifecycle(dialog_id, inbound_recv, outbound_send))
 
             ctx = DialogContext(
@@ -122,39 +125,36 @@ class APP:
         _ = dialog_id
         return self._agents[0]
 
-    async def _consume_outbound(self, dialog_id: str, outbound_recv: MemoryObjectReceiveStream[str | None]) -> None:
-        pending_chunks: list[str] = []
+    async def _consume_outbound(self, peer: telethon.types.TypePeer, outbound_recv: MemoryObjectReceiveStream[OutBoundMessage]) -> None:
+        dialog_id = peer_hash_into_str(peer)
 
+        limiter = Throttler(rate_limit=1)
         async with outbound_recv:
             async for message in outbound_recv:
-                if message is None:
-                    if not pending_chunks:
-                        continue
-                    text = "".join(pending_chunks)
-                    pending_chunks.clear()
-                    print()
-                    print(f"========= {dialog_id}")
-                    print(text)
-                    print()
-                    continue
 
-                pending_chunks.append(message)
+                async def _sending(peer: telethon.types.TypePeer = peer, message: OutBoundMessage = message):
+                    content = ""
+                    match message:
+                        case str():
+                            content = message
+                        case AcpMessage():
+                            content = message.markdown()
+                    if content == "":
+                        return
 
-        if pending_chunks:
-            print()
-            print(f"========= {dialog_id}")
-            print("".join(pending_chunks))
-            print()
+                    await self._tele_client.send_message(peer, content)
+
+                # TODO: how to edit messages?
+                await limiter.call(_sending)
 
     async def _run_dialog_lifecycle(
-        self, dialog_id: str, inbound_recv: MemoryObjectReceiveStream[Message], outbound_send: MemoryObjectSendStream[str | None]
+        self, dialog_id: str, inbound_recv: MemoryObjectReceiveStream[Message], outbound_send: MemoryObjectSendStream[OutBoundMessage]
     ) -> None:
         try:
             agent_config = await self.get_agent_for_dialog(dialog_id)
             agent_thread = AgentThread(
                 dialog_id=dialog_id,
                 agent_config=agent_config,
-                # agent_registry=self.list_agents(),
                 inbound_recv=inbound_recv,
                 outbound_send=outbound_send,
             )

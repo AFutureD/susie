@@ -1,11 +1,15 @@
 from __future__ import annotations
+import asyncio
 
+import anyio
 import logging
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from pathlib import Path
 
 from acp.schema import HttpMcpServer
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
+from tele_acp.types import AcpMessageChunk, OutBoundMessage
+from tele_acp.types.acp import AcpMessage
 from telethon.custom import Message
 
 from tele_acp.acp import ACPAgentConfig
@@ -19,17 +23,23 @@ class AgentThread:
         dialog_id: str,
         agent_config: ACPAgentConfig,
         inbound_recv: MemoryObjectReceiveStream[Message],
-        outbound_send: MemoryObjectSendStream[str | None],
+        outbound_send: MemoryObjectSendStream[OutBoundMessage],
     ) -> None:
         self.dialog_id = dialog_id
         self.inbound_recv = inbound_recv
         self.outbound_send = outbound_send
         self.logger = logging.getLogger(f"{__name__}:{dialog_id}")
 
+        inner_outbound_writer, inner_outbound = anyio.create_memory_object_stream[AcpMessageChunk](0)
+        self._inner_outbound = inner_outbound
+
+        self._message_lock = asyncio.Lock()
+        self.message: AcpMessage | None = None
+
         mcp_server = HttpMcpServer(name="Telegram ACP Interface", url="http://127.0.0.1:9998/mcp", headers=[], type="http")
         self._runtime = ACPAgentRuntime(
             agent_config=agent_config,
-            outbound_send=outbound_send,
+            outbound_send=inner_outbound_writer,
             logger=self.logger,
             cwd=Path.cwd(),
             mcp_servers=[mcp_server],
@@ -40,16 +50,43 @@ class AgentThread:
             await ts.enter_async_context(self.outbound_send)
             await ts.enter_async_context(self.inbound_recv)
             await ts.enter_async_context(self._runtime)
+            await ts.enter_async_context(self.handler_acp_message())
 
             async for message in self.inbound_recv:
                 content = message.message
-                if not content:
+                if not content or not isinstance(content, str):
                     continue
 
                 self.logger.info("Dialog %s received: %s", self.dialog_id, content)
 
                 async with self.in_turn():
+                    async with self._message_lock:
+                        if self.message is None:
+                            self.logger.warning("Message state is not initialized for dialog %s", self.dialog_id)
+                            continue
+                        self.message.prompt = content
                     await self._forward_to_acp(content)
+
+    async def _run_acp_message_handler(self) -> None:
+        async with self._inner_outbound:
+            async for chunk in self._inner_outbound:
+                async with self._message_lock:
+                    if self.message is None:
+                        continue
+                    self.message.chunks.append(chunk)
+                    message = self.message.model_copy(deep=True)
+
+                await self.outbound_send.send(message)
+
+    @asynccontextmanager
+    async def handler_acp_message(self):
+        task = asyncio.create_task(self._run_acp_message_handler())
+        try:
+            yield
+        finally:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
 
     async def command_help(self) -> None:
         await self._send_system_message(
@@ -115,14 +152,21 @@ class AgentThread:
 
     @asynccontextmanager
     async def in_turn(self):
-        await self._start_turn()
         try:
+            await self._start_turn()
             yield
         finally:
             await self._finish_turn()
 
     async def _start_turn(self) -> None:
-        pass
+        async with self._message_lock:
+            self.message = AcpMessage(
+                prompt=None,
+                model=None,
+                chunks=[],
+                usage=None,
+            )
 
     async def _finish_turn(self) -> None:
-        await self.outbound_send.send(None)
+        async with self._message_lock:
+            self.message = None
