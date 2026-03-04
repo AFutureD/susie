@@ -19,14 +19,9 @@ class InnerVerifier(TokenVerifier):
         return AccessToken(token=token, client_id=str(uuid.uuid7()), scopes=[])
 
 
-# mcp_server = HttpMcpServer(name="Telegram ACP Interface", url="http://127.0.0.1:9998/mcp", headers=[], type="http")
 class MCP(FastMCP):
     def __init__(self):
-        super().__init__(
-            name="telegram_mcp_server",
-            json_response=True,
-            port=9998,
-        )
+        super().__init__(name="telegram_mcp_server", json_response=True, port=9998)
         self._tg: TGClient | None = None
 
     def set_tg_client(self, tg: TGClient) -> None:

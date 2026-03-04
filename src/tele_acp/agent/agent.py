@@ -99,6 +99,9 @@ class ACPAgentRuntime:
                     ACPClient(self._outbound_send, self._logger),
                     agent_config.acp_path,
                     *agent_config.acp_args,
+                    transport_kwargs={
+                        "limit": 10 * (2**10) * (2**10),  # Buffer Limit 10MB,
+                    },
                 )
             )
             await conn.initialize(
@@ -110,7 +113,8 @@ class ACPAgentRuntime:
                 self._stack = stack
                 self._conn = conn
                 self._proc = proc
-        except Exception:
+        except Exception as e:
+            self._logger.error(f"Failed to start ACP agent process, Error: {e}", e)
             await stack.aclose()
             raise
 
