@@ -1,4 +1,5 @@
 from typing import TypeAlias
+
 from telethon import types
 from telethon.tl.custom.message import Message
 

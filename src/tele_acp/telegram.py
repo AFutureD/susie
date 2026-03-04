@@ -1,13 +1,14 @@
 import inspect
 import sqlite3
 import typing
+from datetime import datetime
 from pathlib import Path
-from sre_compile import SUBPATTERN
 from typing import Callable
 
 import telethon
 from telethon import hints
 from telethon.errors import RPCError
+from telethon.tl.custom import Message
 from telethon.tl.functions.account import GetAuthorizationsRequest
 
 from tele_acp import types
@@ -195,3 +196,51 @@ class TGClient(telethon.TelegramClient):
             ret = messages
 
         return ret
+
+    async def list_messages(
+        self,
+        entity: hints.EntityLike,
+        date_start: datetime | None = None,
+        date_end: datetime | None = None,
+        offset_id: int = 0,  # Annotated[int, typer.Option("--offset_id", help="Pagination offset message ID (excluded).")] = 0,
+        limit: int | None = None,  # Annotated[int | None, typer.Option("--num", "-n", help="Maximum number of messages to fetch.")] = None,
+        reverse: bool = False,
+    ) -> list[Message]:
+        """List messages from a dialog.
+
+        date range or limit must be specified, or limit 1 will be set as default as fetch newest message.
+
+        Args:
+            entity: The entity to list messages from.
+            date_start: The start date for the message range.
+            date_end: The end date for the message range.
+            offset_id: The message ID to start from (excluded).
+            limit: The maximum number of messages to fetch.
+            reverse: Whether to reverse the order of messages.
+
+        Returns:
+            A list of messages.
+
+        """
+        earliest_message: Message | None = None
+        if date_start:
+            ret: list[Message] = [msg async for msg in self.iter_messages(entity, offset_date=date_start, limit=1, offset_id=-1)]
+            earliest_message = ret[0] if len(ret) >= 1 else None
+        min_id: int = earliest_message.id if earliest_message else 0
+
+        if (limit is None or limit == 0) and (date_start is None and date_end is None):
+            limit = 1
+
+        messages = [
+            msg
+            async for msg in self.iter_messages(
+                entity,
+                min_id=min_id,
+                add_offset=(-1 if min_id else 0),
+                offset_id=offset_id,
+                offset_date=date_end,
+                reverse=reverse,
+                limit=limit,  # type: ignore[arg-type]  # Telethon accepts None despite annotation
+            )
+        ]
+        return messages

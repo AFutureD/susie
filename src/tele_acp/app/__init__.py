@@ -4,8 +4,6 @@ from contextlib import suppress
 from dataclasses import dataclass
 
 import anyio
-from tele_acp.types.acp import AcpMessage
-from tele_acp.utils.throttle import Throttler
 import telethon
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from telethon import events
@@ -16,7 +14,9 @@ from tele_acp.agent import AgentThread
 from tele_acp.mcp import MCP
 from tele_acp.telegram import TGClient
 from tele_acp.types import OutBoundMessage, peer_hash_into_str
+from tele_acp.types.acp import AcpMessage
 from tele_acp.types.config import Config
+from tele_acp.utils.throttle import Throttler
 
 
 @dataclass
@@ -129,34 +129,15 @@ class APP:
     async def _consume_outbound(self, peer: telethon.types.TypePeer, outbound_recv: MemoryObjectReceiveStream[OutBoundMessage]) -> None:
         dialog_id = peer_hash_into_str(peer)
 
-        limiter = Throttler(rate_limit=1)
-        # TODO: add lock
-        sending: telethon.types.Message | None = None
-
         async with outbound_recv:
             async for message in outbound_recv:
-
-                async def _sending(peer: telethon.types.TypePeer = peer, message: OutBoundMessage = message):
-                    nonlocal sending
-                    match message:
-                        case str():
-                            sending = None
-                            await self._tele_client.send_message(peer, message)
-                        case AcpMessage():
-                            text = message.markdown()
-                            if sending is not None:
-                                await self._tele_client.edit_message(peer, sending.id, text)
-                            else:
-                                sending = await self._tele_client.send_message(peer, text)
-
-                            if not message.in_turn:
-                                sending = None
-
-                await limiter.call(_sending)
-
-                if isinstance(message, AcpMessage):
-                    if not message.in_turn:
-                        await limiter.flush()
+                match message:
+                    case str():
+                        await self._tele_client.send_message(peer, message)
+                    case AcpMessage():
+                        text = message.markdown()
+                        if not message.in_turn:
+                            await self._tele_client.send_message(peer, text)
 
     async def _run_dialog_lifecycle(
         self, dialog_id: str, inbound_recv: MemoryObjectReceiveStream[Message], outbound_send: MemoryObjectSendStream[OutBoundMessage]

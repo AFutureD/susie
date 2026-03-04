@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import Any
 
@@ -7,7 +6,6 @@ from acp import schema
 from anyio.streams.memory import MemoryObjectSendStream
 
 from tele_acp.types import AcpMessageChunk, unreachable
-from tele_acp.types.acp import AcpMessage
 
 
 class ACPClient(acp.Client):

@@ -1,16 +1,32 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import cast
 
+from mcp.server.auth.provider import AccessToken, TokenVerifier
+from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import Context, FastMCP
+from pydantic import AnyHttpUrl
 from telethon import hints
 
 from tele_acp.telegram import TGClient
 
 
+class InnerVerifier(TokenVerifier):
+    async def verify_token(self, token: str) -> AccessToken | None:
+        import uuid
+
+        return AccessToken(token=token, client_id=str(uuid.uuid7()), scopes=[])
+
+
+# mcp_server = HttpMcpServer(name="Telegram ACP Interface", url="http://127.0.0.1:9998/mcp", headers=[], type="http")
 class MCP(FastMCP):
     def __init__(self):
-        super().__init__(name="Telegram MCP Server", json_response=True, port=9998)
+        super().__init__(
+            name="telegram_mcp_server",
+            json_response=True,
+            port=9998,
+        )
         self._tg: TGClient | None = None
 
     def set_tg_client(self, tg: TGClient) -> None:
@@ -81,3 +97,85 @@ async def send_message(
         return msg.to_json()
     except Exception as e:
         return str(e)
+
+
+@mcp_server.tool()
+async def list_messages(
+    ctx: Context,
+    entity: str | int,
+    date_start: str | None = None,
+    date_end: str | None = None,
+    date_range: str | None = None,
+    offset_id: int = 0,
+    limit: int | None = None,
+    reverse: bool = False,
+) -> list[str] | None:
+    """List messages from a dialog.
+
+    By default if no date range is specified and not limit is given, it fetches the latest message.
+
+    Args:
+        entity: The entity to list messages from.
+        date_start:
+            The start date for the message range.
+            Accepts natural language dates, e.g. "-2d", "yesterday", "2 weeks ago".
+        date_end:
+            The end date for the message range.
+            Accepts natural language dates, e.g. "-1d", "yesterday", "2 weeks ago".
+        date_range:
+            The date range for the message range. overrides `date_start` and `date_end`.
+            Accepts natural language date ranges, e.g. "last week", "this month".
+            Special case: "this week" is treated as Sunday..Saturday.
+        offset_id: The message ID to start from (excluded).
+        limit:
+            The maximum number of messages to fetch.
+        reverse:
+            Whether to reverse the order of messages.
+
+    Returns:
+        A list of messages.
+
+    """
+    tg = cast(MCP, ctx.fastmcp).tg
+
+    import dateparser
+    from dateparser.search import search_dates
+
+    date_from: datetime | None = None
+    if date_start:
+        date_from = dateparser.parse(date_start)
+        date_from = date_from and date_from.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    date_to: datetime | None = None
+    if date_end:
+        date_to = dateparser.parse(date_end)
+        date_to = date_to and date_to.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    date_span: list[datetime] | None = None
+    if date_range and date_range == "this week":
+        start_date = dateparser.parse("sunday")
+        assert start_date is not None
+        date_span = [start_date, start_date + timedelta(days=6)]
+    elif date_range:
+        dates = search_dates(date_range, settings={"RETURN_TIME_SPAN": True}) or []
+        if len(dates) == 2:
+            # https://github.com/scrapinghub/dateparser/blob/cd5f226454e0ed3fe93164e7eff55b00f57e57c7/dateparser/search/search.py#L202
+            start = next((x for (s, x) in dates if "start" in s), None)
+            end = next((x for (s, x) in dates if "end" in s), None)
+            if start and end:
+                date_span = [start, end]
+
+    if date_span:
+        date_from = date_span[0]
+        date_to = date_span[1]
+
+    messages = await tg.list_messages(
+        entity=entity,
+        date_start=date_from,
+        date_end=date_to,
+        offset_id=offset_id,
+        limit=limit,
+        reverse=reverse,
+    )
+
+    return [msg.to_json() or "{}" for msg in messages]

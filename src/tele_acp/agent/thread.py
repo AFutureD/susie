@@ -1,18 +1,18 @@
 from __future__ import annotations
-import asyncio
 
-import anyio
+import asyncio
 import logging
 from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from pathlib import Path
 
+import anyio
 from acp.schema import HttpMcpServer
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
-from tele_acp.types import AcpMessageChunk, OutBoundMessage
-from tele_acp.types.acp import AcpMessage
 from telethon.custom import Message
 
 from tele_acp.acp import ACPAgentConfig
+from tele_acp.types import AcpMessageChunk, OutBoundMessage
+from tele_acp.types.acp import AcpMessage
 
 from .agent import ACPAgentRuntime
 
@@ -36,7 +36,7 @@ class AgentThread:
         self._message_lock = asyncio.Lock()
         self.message: AcpMessage | None = None
 
-        mcp_server = HttpMcpServer(name="Telegram ACP Interface", url="http://127.0.0.1:9998/mcp", headers=[], type="http")
+        mcp_server = HttpMcpServer(name="telegram_mcp_server", url="http://127.0.0.1:9998/mcp", headers=[], type="http")
         self._runtime = ACPAgentRuntime(
             agent_config=agent_config,
             outbound_send=inner_outbound_writer,
