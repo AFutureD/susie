@@ -63,7 +63,7 @@ class AgentBaseThread:
             | acp.schema.CurrentModeUpdate
             | acp.schema.ConfigOptionUpdate
             | acp.schema.SessionInfoUpdate
-            | acp.schema.UsageUpdate,
+            | acp.schema.UsageUpdate
         ](0)
         self._inner_outbound = inner_outbound
 

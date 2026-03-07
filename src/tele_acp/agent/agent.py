@@ -12,7 +12,6 @@ from anyio.streams.memory import MemoryObjectSendStream
 
 from tele_acp.acp import ACPAgentConfig, ACPClient
 from tele_acp.constant import VERSION
-from tele_acp.types.acp import AcpMessageChunk
 
 
 class ACPAgentRuntime:
@@ -22,7 +21,19 @@ class ACPAgentRuntime:
         self,
         *,
         agent_config: ACPAgentConfig,
-        outbound_send: MemoryObjectSendStream[AcpMessageChunk],
+        outbound_send: MemoryObjectSendStream[
+            acp.schema.UserMessageChunk
+            | acp.schema.AgentMessageChunk
+            | acp.schema.AgentThoughtChunk
+            | acp.schema.ToolCallStart
+            | acp.schema.ToolCallProgress
+            | acp.schema.AgentPlanUpdate
+            | acp.schema.AvailableCommandsUpdate
+            | acp.schema.CurrentModeUpdate
+            | acp.schema.ConfigOptionUpdate
+            | acp.schema.SessionInfoUpdate
+            | acp.schema.UsageUpdate
+        ],
         logger: logging.Logger,
         cwd: Path,
         mcp_servers: list[HttpMcpServer | SseMcpServer | McpServerStdio] | None = None,
