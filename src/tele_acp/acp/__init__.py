@@ -1,8 +1,8 @@
 from pydantic.dataclasses import dataclass
 
-from .client import ACPClient
+from .client import ACPClient, ACPUpdateChunk
 
-__all__ = ["ACPClient"]
+__all__ = ["ACPClient", "ACPUpdateChunk"]
 
 
 # curl https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json

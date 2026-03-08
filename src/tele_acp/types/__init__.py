@@ -19,7 +19,6 @@ __all__ = [
     "Order",
     "peer_hash_into_str",
     "unreachable",
-    "ACPAgentConfig",
     "AgentConfig",
     "AcpMessageChunk",
     "AcpMessage",

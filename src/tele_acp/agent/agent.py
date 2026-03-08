@@ -10,7 +10,7 @@ from acp.client.connection import ClientSideConnection
 from acp.schema import HttpMcpServer, Implementation, McpServerStdio, SseMcpServer
 from anyio.streams.memory import MemoryObjectSendStream
 
-from tele_acp.acp import ACPAgentConfig, ACPClient
+from tele_acp.acp import ACPAgentConfig, ACPClient, ACPUpdateChunk
 from tele_acp.constant import VERSION
 
 
@@ -21,26 +21,14 @@ class ACPAgentRuntime:
         self,
         *,
         agent_config: ACPAgentConfig,
-        outbound_send: MemoryObjectSendStream[
-            acp.schema.UserMessageChunk
-            | acp.schema.AgentMessageChunk
-            | acp.schema.AgentThoughtChunk
-            | acp.schema.ToolCallStart
-            | acp.schema.ToolCallProgress
-            | acp.schema.AgentPlanUpdate
-            | acp.schema.AvailableCommandsUpdate
-            | acp.schema.CurrentModeUpdate
-            | acp.schema.ConfigOptionUpdate
-            | acp.schema.SessionInfoUpdate
-            | acp.schema.UsageUpdate
-        ],
+        outbound: MemoryObjectSendStream[ACPUpdateChunk],
         logger: logging.Logger,
         cwd: Path,
         mcp_servers: list[HttpMcpServer | SseMcpServer | McpServerStdio] | None = None,
     ) -> None:
         self._logger = logger
 
-        self._outbound_send = outbound_send
+        self._outbound = outbound
 
         self._agent_config_lock = asyncio.Lock()
         self._agent_config = agent_config
@@ -57,12 +45,13 @@ class ACPAgentRuntime:
         self._session: acp.NewSessionResponse | None = None
 
     @property
-    def agent_config(self) -> ACPAgentConfig:
-        return self._agent_config
+    async def agent_config(self) -> ACPAgentConfig:
+        async with self._agent_config_lock:
+            return self._agent_config
 
     async def restart(self, agent_config: ACPAgentConfig | None) -> None:
-        async with self._agent_config_lock:
-            if agent_config:
+        if agent_config:
+            async with self._agent_config_lock:
                 self._agent_config = agent_config
 
         await self._stop()
@@ -81,14 +70,14 @@ class ACPAgentRuntime:
         session = await self._new_session()
         return session
 
-    async def send_immediately(self, *, messages: list[str]) -> acp.PromptResponse:
+    async def send_immediately(self, *, contents: list[str]) -> acp.PromptResponse:
         conn = await self._ensure_conn()
         session = await self._ensure_session()
 
-        prompt = map(lambda m: acp.text_block(m), messages)
+        prompt = map(lambda m: acp.text_block(m), contents)
         return await conn.prompt(prompt=list(prompt), session_id=session.session_id)
 
-    async def stop_and_send_immediately(self) -> None:
+    async def stop(self) -> None:
         conn = await self._ensure_conn()
         session = await self._ensure_session()
         await conn.cancel(session_id=session.session_id)
@@ -113,7 +102,7 @@ class ACPAgentRuntime:
         try:
             conn, proc = await stack.enter_async_context(
                 acp.spawn_agent_process(
-                    ACPClient(self._outbound_send, self._logger),
+                    ACPClient(self._outbound, self._logger),
                     agent_config.acp_path,
                     *agent_config.acp_args,
                     cwd=self._cwd,

@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, TypeAlias
 
 import acp
 from acp import schema
@@ -7,30 +7,32 @@ from anyio.streams.memory import MemoryObjectSendStream
 
 from tele_acp.types import unreachable
 
+ACPUpdateChunk: TypeAlias = (
+    schema.UserMessageChunk
+    | schema.AgentMessageChunk
+    | schema.AgentThoughtChunk
+    | schema.ToolCallStart
+    | schema.ToolCallProgress
+    | schema.AgentPlanUpdate
+    | schema.AvailableCommandsUpdate
+    | schema.CurrentModeUpdate
+    | schema.ConfigOptionUpdate
+    | schema.SessionInfoUpdate
+    | schema.UsageUpdate
+)
+
 
 class ACPClient(acp.Client):
     def __init__(
         self,
-        outbound_send: MemoryObjectSendStream[
-            schema.UserMessageChunk
-            | schema.AgentMessageChunk
-            | schema.AgentThoughtChunk
-            | schema.ToolCallStart
-            | schema.ToolCallProgress
-            | schema.AgentPlanUpdate
-            | schema.AvailableCommandsUpdate
-            | schema.CurrentModeUpdate
-            | schema.ConfigOptionUpdate
-            | schema.SessionInfoUpdate
-            | schema.UsageUpdate
-        ],
-        logger: logging.Logger,
+        outbound: MemoryObjectSendStream[ACPUpdateChunk],
+        logger: logging.Logger | None,
     ) -> None:
-        self._outbound_queue = outbound_send
-        self._logger = logger
+        self._outbound_queue = outbound
+        self.logger = logger or logging.getLogger(__name__)
 
     def on_connect(self, conn: acp.Agent) -> None:
-        self._logger.info("Connected to ACP agent: %s", conn)
+        self.logger.info("Connected to ACP agent: %s", conn)
 
     async def session_update(
         self,
@@ -48,8 +50,8 @@ class ACPClient(acp.Client):
         | schema.UsageUpdate,
         **kwargs: Any,
     ) -> None:
-        self._logger.info("session_update")
-        self._logger.info(update)
+        self.logger.info("session_update")
+        self.logger.info(update)
 
         _ = kwargs
 

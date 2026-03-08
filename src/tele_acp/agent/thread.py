@@ -11,7 +11,7 @@ import anyio
 from acp.schema import HttpMcpServer, McpServerStdio, SseMcpServer
 from telethon.custom import Message
 
-from tele_acp.acp import ACPAgentConfig
+from tele_acp.acp import ACPAgentConfig, ACPUpdateChunk
 from tele_acp.shared import get_app_user_defualt_dir
 from tele_acp.types import OutBoundMessage
 from tele_acp.types.acp import AcpMessage
@@ -62,7 +62,7 @@ class AgentBaseThread:
 
         self._runtime = ACPAgentRuntime(
             agent_config=acp_config,
-            outbound_send=inner_outbound_writer,
+            outbound=inner_outbound_writer,
             logger=self.logger,
             cwd=self.work_dir(agent_config.id, agent_config.work_dir),
             mcp_servers=mcp_servers,
@@ -94,16 +94,12 @@ class AgentBaseThread:
         return [content]
 
     async def run_turn(self, content: str) -> None:
-        await self._start_turn(content)
-        try:
-            async with self.turn_context():
-                response = await self._runtime.send_immediately(messages=self.build_runtime_messages(content))
+        async with self._in_turn() as message, self.turn_context():
+            message.prompt = content
 
-                async with self._message_lock:
-                    if self.message is not None:
-                        self.message.stopReason = response.stopReason
-        finally:
-            await self._finish_turn()
+            contents = self.build_runtime_messages(content)
+            response = await self._runtime.send_immediately(contents=contents)
+            message.stopReason = response.stopReason
 
     async def handle_inbound_message(self, message: Message):
         content = message.message
@@ -111,12 +107,12 @@ class AgentBaseThread:
             return
 
         if not self.queue_message_when_idle:
-            if self._turn_task is not None and not self._turn_task.done():
-                self.logger.info("Agent turn is still running, skip new input")
-                return
+            if self.message and self.message.stopReason is None:
+                await self._runtime.stop()
+
             self._turn_task = asyncio.create_task(self.run_turn(content))
         else:
-            pass
+            raise RuntimeError("Queue message when idle is not supported")
 
     @asynccontextmanager
     async def _handler_acp_message(self):
@@ -136,17 +132,7 @@ class AgentBaseThread:
 
     async def handle_session_update(
         self,
-        chunk: acp.schema.UserMessageChunk
-        | acp.schema.AgentMessageChunk
-        | acp.schema.AgentThoughtChunk
-        | acp.schema.ToolCallStart
-        | acp.schema.ToolCallProgress
-        | acp.schema.AgentPlanUpdate
-        | acp.schema.AvailableCommandsUpdate
-        | acp.schema.CurrentModeUpdate
-        | acp.schema.ConfigOptionUpdate
-        | acp.schema.SessionInfoUpdate
-        | acp.schema.UsageUpdate,
+        chunk: ACPUpdateChunk,
     ):
         if self.message is None:
             return
@@ -169,7 +155,8 @@ class AgentBaseThread:
     async def turn_context(self) -> AsyncIterator[None]:
         yield
 
-    async def _start_turn(self, content: str) -> None:
+    @asynccontextmanager
+    async def _in_turn(self) -> AsyncIterator[AcpMessage]:
         async with self._message_lock:
             message = self.message
             if not (message is not None and message.stopReason == "cancelled"):
@@ -180,31 +167,21 @@ class AgentBaseThread:
                     usage=None,
                 )
             else:
-                message.chunks.clear()
                 message.usage = None
                 message.stopReason = None
 
-            message.prompt = content
             self.message = message
 
-    async def _finish_turn(self) -> None:
-        """
-        Clean up message.
-        keep it if this turn is stop by `cancelled` and can be reuse in next turn.
-        """
-
-        async with self._message_lock:
-            message = self.message
-
-            if message is None:
-                return
-
+        try:
+            yield message
+        finally:
             self.logger.info(f"Agent turn has end {message.markdown()}")
 
-            if not (message.stopReason and message.stopReason == "cancelled"):
-                self.message = None
+            async with self._message_lock:
+                if not (message.stopReason and message.stopReason == "cancelled"):
+                    self.message = None
 
-        await self.handle_outbound_message(message)
+            await self.handle_outbound_message(message)
 
     async def handle_outbound_message(self, message: OutBoundMessage):
         pass
