@@ -12,29 +12,34 @@ from tele_acp.telegram import TGClient
 class MCP(FastMCP):
     def __init__(self):
         super().__init__(name="telegram_mcp_server", json_response=True, port=9998)
-        self._tg: TGClient | None = None
-
-    def set_tg_client(self, tg: TGClient) -> None:
-        self._tg = tg
+        self._clients: dict[str, TGClient] = {}
 
     @property
-    def tg(self) -> TGClient:
-        if self._tg is None:
-            raise RuntimeError("Telegram client is not bound to MCP server.")
+    def mcp_url(self) -> str:
+        return f"http://{self.settings.host}:{self.settings.port}{self.settings.streamable_http_path}"
 
-        if not self._tg.is_connected:
-            raise RuntimeError("Telegram client is not connected.")
+    def set_tele_client(self, channel_id: str, tele_client: TGClient) -> None:
+        self._clients[channel_id] = tele_client
 
-        return self._tg
+    def get_tele_client(self, channel_id: str) -> TGClient:
+        tele_client = self._clients.get(channel_id)
+        if tele_client is None:
+            raise RuntimeError(f"Telegram client is not bound for channel: {channel_id}")
+
+        if not tele_client.is_connected():
+            raise RuntimeError(f"Telegram client is not connected for channel: {channel_id}")
+
+        return tele_client
 
 
 mcp_server = MCP()
 
 
 @mcp_server.tool()
-async def get_self(ctx: Context) -> str | None:
-    """Get Self Information."""
-    me = await cast(MCP, ctx.fastmcp).tg.get_user()
+async def get_self(ctx: Context, channel: str) -> str | None:
+    """Get self information for a configured Telegram channel."""
+    tele_client = cast(MCP, ctx.fastmcp).get_tele_client(channel)
+    me = await tele_client.get_user()
     if not me:
         return None
     return me.to_json()
@@ -43,13 +48,16 @@ async def get_self(ctx: Context) -> str | None:
 @mcp_server.tool()
 async def send_message(
     ctx: Context,
+    channel: str,
     entity: str | int,
     message: str,
     file: list[str] | None = None,
 ) -> str | None:
-    """Send a message to a Telegram entity.
+    """Send a message to a Telegram entity on the given channel.
 
     Args:
+        channel:
+            The Telegram channel id configured in tele-acp.
         entity:
             `peer id` or `username` or `phone`
 
@@ -74,10 +82,10 @@ async def send_message(
         The sent message if succeed.
 
     """
-    tg = cast(MCP, ctx.fastmcp).tg
+    tele_client = cast(MCP, ctx.fastmcp).get_tele_client(channel)
 
     send_file = cast(hints.FileLike | list[hints.FileLike] | None, file)
-    msg = await tg.send_message(entity=entity, message=message, file=send_file)
+    msg = await tele_client.send_message(entity=entity, message=message, file=send_file)
 
     try:
         return msg.to_json()
@@ -88,6 +96,7 @@ async def send_message(
 @mcp_server.tool()
 async def list_messages(
     ctx: Context,
+    channel: str,
     entity: str | int,
     date_start: str | None = None,
     date_end: str | None = None,
@@ -96,11 +105,13 @@ async def list_messages(
     limit: int | None = None,
     reverse: bool = False,
 ) -> list[str] | None:
-    """List messages from a dialog.
+    """List messages from a dialog on the given channel.
 
     By default if no date range is specified and not limit is given, it fetches the latest message.
 
     Args:
+        channel:
+            The Telegram channel id configured in tele-acp.
         entity:
             The entity to list messages from. `peer id` or `username` or `phone`
 
@@ -124,7 +135,7 @@ async def list_messages(
         A list of messages.
 
     """
-    tg = cast(MCP, ctx.fastmcp).tg
+    tele_client = cast(MCP, ctx.fastmcp).get_tele_client(channel)
 
     import dateparser
     from dateparser.search import search_dates
@@ -157,7 +168,7 @@ async def list_messages(
         date_from = date_span[0]
         date_to = date_span[1]
 
-    messages = await tg.list_messages(
+    messages = await tele_client.list_messages(
         entity=entity,
         date_start=date_from,
         date_end=date_to,

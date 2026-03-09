@@ -83,5 +83,5 @@ Examples:
 To list all TODOs that embeded in code files.
 
 ```bash
-rg --trim "// ?TODO" ./FaceYoga/Classes
+rg --trim "// ?TODO" [PATH ...]
 ```

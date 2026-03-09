@@ -33,7 +33,7 @@ class ACPAgentRuntime:
         self._agent_config_lock = asyncio.Lock()
         self._agent_config = agent_config
 
-        self._cwd = str(cwd)
+        self._cwd = str(cwd.resolve().absolute())
         self._mcp_servers = mcp_servers
 
         self._lock = asyncio.Lock()

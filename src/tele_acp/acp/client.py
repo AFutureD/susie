@@ -50,8 +50,8 @@ class ACPClient(acp.Client):
         | schema.UsageUpdate,
         **kwargs: Any,
     ) -> None:
-        self.logger.info("session_update")
-        self.logger.info(update)
+        # self.logger.info("session_update")
+        # self.logger.info(update)
 
         _ = kwargs
 
