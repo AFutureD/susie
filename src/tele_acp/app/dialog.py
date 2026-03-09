@@ -146,9 +146,15 @@ class DialogManager:
                 self._task_stack = None
                 self.dialogs.clear()
 
-    async def get_dialog(self, channel_id: str, peer: telethon.types.TypePeer, tele_action: TGActionProvider) -> Dialog | None:
+    async def get_dialog(
+        self,
+        channel_id: str,
+        peer: telethon.types.TypePeer,
+        tele_action: TGActionProvider,
+    ) -> Dialog | None:
         dialog_id = peer_hash_into_str(peer)
         dialog_key = (channel_id, dialog_id)
+
         if dialog_key in self.dialogs:
             return self.dialogs[dialog_key]
 
