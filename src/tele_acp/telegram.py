@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Callable, Protocol, cast
 
 import telethon
+from pydantic.dataclasses import dataclass
 from telethon import functions, hints
 from telethon.errors import RPCError
 from telethon.tl.custom import Message
@@ -48,26 +49,41 @@ class TGActionProvider(Protocol):
     ) -> telethon.types.Message: ...
 
 
+@dataclass
+class TGAuthentication:
+    require_preauthentication: bool = True
+    bot_token: str | None = None
+
+
 class TGClient(telethon.TelegramClient, TGActionProvider):
     @staticmethod
-    def create(session_name: str | None, config: types.Config, with_current: bool = True) -> TGClient:
+    def create(config: types.TelegramUserChannel | types.TelegramBotChannel, with_current: bool = True) -> TGClient:
+        session_name = config.session_name
+        api_id = config.api_id or types.DEFAULT_TELEGRAM_API_ID
+        api_hash = config.api_hash or types.DEFAULT_TELEGRAM_API_HASH
+
+        match config:
+            case types.TelegramUserChannel():
+                authentication = TGAuthentication()
+            case types.TelegramBotChannel():
+                authentication = TGAuthentication(require_preauthentication=False, bot_token=config.token)
+
         session: TGSession = load_session(session_name, with_current=with_current)
+        return TGClient(session=session, api_id=api_id, api_hash=api_hash, authentication=authentication)
 
-        return TGClient(
-            session=session,
-            api_id=config.api_id,
-            api_hash=config.api_hash,
-        )
-
-    def __init__(self: "TGClient", session: TGSession, api_id: int, api_hash: str, **kwargs):
+    def __init__(self: "TGClient", session: TGSession, api_id: int, api_hash: str, authentication: TGAuthentication, **kwargs):
         super().__init__(session, api_id, api_hash, **kwargs)
 
         self.contacts_users_peer_last_update_date = 0
         self.contacts_users_peer: list[PeerUser] = []
+        self.authentication = authentication
 
     async def _start_without_login(self) -> "TGClient":
         if not self.is_connected():
             await self.connect()
+
+        if (bot_token := self.authentication.bot_token) and not self.authentication.require_preauthentication:
+            await self.sign_in(bot_token=bot_token)
         return self
 
     async def __aenter__(self):

@@ -14,12 +14,11 @@ from telethon.custom import Message
 
 from tele_acp.mcp import MCP
 from tele_acp.telegram import TGClient
-from tele_acp.types import Config, peer_hash_into_str
-from tele_acp.types.channel import TelegramChannel
+from tele_acp.types import Config, TelegramBotChannel, TelegramUserChannel, peer_hash_into_str
 
 
 @dataclass(frozen=True, slots=True)
-class InboundEnvelope:
+class InboundMessage:
     channel_id: str
     client: TGClient
     message: Message
@@ -27,65 +26,58 @@ class InboundEnvelope:
 
 
 @dataclass(frozen=True, slots=True)
-class TelegramRuntime:
-    channel: TelegramChannel
+class Channel:
+    config: TelegramUserChannel | TelegramBotChannel
     client: TGClient
 
 
-class TelegramManager:
+class ChannelsGateway:
     def __init__(
         self,
         config: Config,
         *,
         mcp_server: MCP,
-        on_message: Callable[[InboundEnvelope], Awaitable[None]],
+        on_message: Callable[[InboundMessage], Awaitable[None]],
     ) -> None:
-        self.logger = logging.getLogger(__name__)
-
         self._config = config
         self._mcp_server = mcp_server
         self._on_message = on_message
 
+        self.logger = logging.getLogger("ChannelsGateway")
+
         self._run_lock = asyncio.Lock()
         self._has_started = False
 
-        channels = [channel for channel in config.channel if isinstance(channel, TelegramChannel)]
-        if not channels:
-            raise ValueError("At least one Telegram channel is required.")
-
-        if len(channels) > 1 and any(channel.session_name is None for channel in channels):
-            raise ValueError("TelegramChannel.session_name must be set when multiple Telegram channels are configured.")
-
-        self._runtimes: dict[str, TelegramRuntime] = {}
-        for channel in channels:
-            if channel.id in self._runtimes:
+        self._channels: dict[str, Channel] = {}
+        for channel in config.channels:
+            if channel.id in self._channels:
                 raise ValueError(f"Duplicate Telegram channel id: {channel.id}")
 
-            client = TGClient.create(session_name=channel.session_name, config=config)
+            client = TGClient.create(config=channel)
             client.add_event_handler(self._build_message_handler(channel.id), events.NewMessage())
 
             self._mcp_server.set_tele_client(channel.id, client)
-            self._runtimes[channel.id] = TelegramRuntime(channel=channel, client=client)
+            self._channels[channel.id] = Channel(config=channel, client=client)
 
     @contextlib.asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
         async with self._run_lock:
             if self._has_started:
-                raise RuntimeError("TelegramManager has already started.")
+                raise RuntimeError("ChannelsGateway has already started.")
             self._has_started = True
 
         async with AsyncExitStack() as stack:
-            for runtime in self._runtimes.values():
+            for runtime in self._channels.values():
                 await stack.enter_async_context(runtime.client)
 
-            self.logger.info("Started %s Telegram clients", len(self._runtimes))
+            self.logger.info("Started %s Telegram clients", len(self._channels))
             try:
                 yield
             finally:
                 self.logger.info("Finished")
 
     async def wait_until_disconnect(self) -> None:
-        disconnect_tasks = [asyncio.ensure_future(runtime.client.disconnected) for runtime in self._runtimes.values()]
+        disconnect_tasks = [asyncio.ensure_future(runtime.client.disconnected) for runtime in self._channels.values()]
         if not disconnect_tasks:
             raise RuntimeError("No Telegram clients are configured.")
 
@@ -108,9 +100,9 @@ class TelegramManager:
         return handler
 
     async def _handle_message(self, channel_id: str, event: events.NewMessage.Event) -> None:
-        runtime = self._runtimes[channel_id]
+        channel = self._channels[channel_id]
         message: Message = event.message
-        self.logger.info("New message received on channel %s: %s", channel_id, message)
+        self.logger.info("New message received on channel `%s`: %s", channel_id, message)
 
         if message.out:
             return
@@ -123,27 +115,27 @@ class TelegramManager:
         if not isinstance(peer, telethon.types.PeerUser):
             return
 
-        if not await self._is_allowed(runtime, peer):
+        if not await self._is_allowed(channel, peer):
             return
 
         await self._on_message(
-            InboundEnvelope(
+            InboundMessage(
                 channel_id=channel_id,
-                client=runtime.client,
+                client=channel.client,
                 message=message,
                 peer=peer,
             )
         )
 
-    async def _is_allowed(self, runtime: TelegramRuntime, peer: telethon.types.PeerUser) -> bool:
-        whitelist = runtime.channel.whitelist or []
+    async def _is_allowed(self, channel: Channel, peer: telethon.types.PeerUser) -> bool:
+        whitelist = channel.config.whitelist or []
         if whitelist and self._peer_matches_whitelist(peer, whitelist):
             return True
 
-        if not runtime.channel.allow_contacts:
+        if isinstance(channel.config, TelegramUserChannel) and not channel.config.allow_contacts:
             return False
 
-        contacts = await runtime.client.get_contact_user_peer()
+        contacts = await channel.client.get_contact_user_peer()
         return any(contact.user_id == peer.user_id for contact in contacts)
 
     def _peer_matches_whitelist(self, peer: telethon.types.TypePeer, whitelist: list[str]) -> bool:

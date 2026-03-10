@@ -15,7 +15,7 @@ def get_config_default_path() -> Path:
 
 
 def get_config_default() -> Config:
-    return Config(api_id=611335, api_hash="d524b414d21f4d37f08684c1df41ac9c")
+    return Config()
 
 
 def save_config(config: Config, config_file: Path):

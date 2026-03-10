@@ -12,7 +12,7 @@ from tele_acp.agent.thread import AgentBaseThread
 from tele_acp.telegram import TGActionProvider
 from tele_acp.types import AcpMessage, AgentConfig, Config, OutBoundMessage, peer_hash_into_str
 
-from .telegram_manager import InboundEnvelope
+from .channels import InboundMessage
 
 ChannelID: TypeAlias = str
 DialogID: TypeAlias = str
@@ -179,7 +179,7 @@ class DialogManager:
             await self._task_stack.enter_async_context(dialog.run_until_finish())
             return dialog
 
-    async def handle_message(self, envelope: InboundEnvelope):
+    async def handle_message(self, envelope: InboundMessage):
         dialog = await self.get_dialog(envelope.channel_id, envelope.peer, envelope.client)
         if not dialog:
             return
