@@ -11,9 +11,7 @@ class Config(BaseModel):
     api_hash: str | None = Field(default=None, description="Telegram api_hash")
     dialog_idle_timeout_minutes: int = Field(default=30, ge=1, description="Idle timeout for per-dialog context")
 
-    channels: list[TelegramUserChannel | TelegramBotChannel] = [
-        TelegramUserChannel(id=DEFAULT_TELEGRAM_ID),
-    ]
+    channels: list[TelegramUserChannel | TelegramBotChannel] = []
     agents: list[AgentConfig] = [AgentConfig(id=DEFAULT_AGENT_ID)]
     bindings: list[DialogBind] = []
 
