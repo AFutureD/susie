@@ -11,6 +11,7 @@ from tele_acp.acp import ACPAgentConfig
 from tele_acp.agent.thread import AgentBaseThread
 from tele_acp.telegram import TGActionProvider, TGClient
 from tele_acp.types import AcpMessage, AgentConfig, Config, OutBoundMessage, TelegramBotChannel, TelegramUserChannel, peer_hash_into_str
+from tele_acp.types.channel import DialogBind
 
 from .channels import InboundMessage
 
@@ -25,6 +26,7 @@ class Dialog(AgentBaseThread):
         self,
         dialog_key: DialogKey,
         peer: telethon.types.TypePeer,
+        report_peer: str | int | telethon.types.TypePeer | None,
         agent_config: AgentConfig,
         acp_config: ACPAgentConfig,
         tele_action: TGActionProvider,
@@ -37,6 +39,7 @@ class Dialog(AgentBaseThread):
         self.acp_config = acp_config
 
         self.peer = peer
+        self.report_peer = report_peer
         self._tele_action = tele_action
         self._ignore_messages_until: float | None = None
 
@@ -91,6 +94,9 @@ class Dialog(AgentBaseThread):
         if self.is_ignoring_messages:
             return
 
+        if message.silent:
+            return
+
         await self.handle_inbound_message(message)
 
     def ignore_responses_for(self, seconds: float) -> None:
@@ -98,8 +104,11 @@ class Dialog(AgentBaseThread):
         self._ignore_messages_until = now + seconds
 
     async def handle_outbound_message(self, message: OutBoundMessage):
-        peer = self.peer
+        peer = self.report_peer
         dialog_id = self.dialog_id
+
+        if peer is None:
+            return
 
         match message:
             case str():
@@ -194,12 +203,14 @@ class DialogManager:
             if dialog_key in self.dialogs:
                 return self.dialogs[dialog_key]
 
-            acp_config = await self.get_acp_for_dialog(dialog_key)
-            agent_config = await self.get_agent_config_for_dialog(dialog_key)
+            binding = self.get_dialog_binding(dialog_key)
+            agent_config = await self.get_agent_config(binding and binding.agent)
+            acp_config = await self.get_acp_for_dialog(agent_config.acp_id)
 
             dialog = Dialog(
                 dialog_key=dialog_key,
                 peer=peer,
+                report_peer=binding and binding.reporter,
                 agent_config=agent_config,
                 acp_config=acp_config,
                 tele_action=tele_action,
@@ -251,21 +262,26 @@ class DialogManager:
         peer_hash = peer_hash_into_str(peer)
         return any(item in {peer_hash, raw_id} for item in whitelist if raw_id is not None)
 
-    async def get_acp_for_dialog(self, dialog_key: DialogKey) -> ACPAgentConfig:
-        agent = await self.get_agent_config_for_dialog(dialog_key)
-        acp_config = self._acp_agents.get(agent.acp_id)
+    async def get_acp_for_dialog(self, acp_id: str) -> ACPAgentConfig:
+        acp_config = self._acp_agents.get(acp_id)
         if acp_config is None:
-            raise ValueError(f"Unknown ACP agent id: {agent.acp_id}")
+            raise ValueError(f"Unknown ACP agent id: {acp_id}")
         return acp_config
 
-    async def get_agent_config_for_dialog(self, dialog_key: DialogKey) -> AgentConfig:
+    def get_dialog_binding(self, dialog_key: DialogKey) -> DialogBind | None:
         channel_id, dialog_id = dialog_key
-        defualt_agent_id = self._config.agents[0].id
         _ = dialog_id
+        return next((binding for binding in self._config.bindings if binding.channel == channel_id), None)
 
-        agent_id = next((binding.agent for binding in self._config.bindings if binding.channel == channel_id), defualt_agent_id)
-        agent = self._agents_by_id.get(agent_id)
+    async def get_agent_config(self, agent_id: str | None) -> AgentConfig:
+        if agent_id is not None and agent_id in self._agents_by_id:
+            return next(iter(self._agents_by_id.values()))
 
-        if agent is None:
-            raise ValueError(f"Unknown agent id: {agent_id}")
-        return agent
+        agents_count = len(self._agents_by_id.keys())
+
+        if agents_count == 0:
+            raise ValueError("No agents available")
+        elif agents_count == 1:
+            return next(iter(self._agents_by_id.values()))
+        else:
+            raise ValueError("Multiple agents available, but no agent id provided")

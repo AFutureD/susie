@@ -46,3 +46,4 @@ TypeTelegramChannel: TypeAlias = TelegramUserChannel | TelegramBotChannel
 class DialogBind(BaseModel):
     agent: str = Field(default=DEFAULT_AGENT_ID, description="The id of the `Agent`")
     channel: str = Field(default=DEFAULT_TELEGRAM_ID, description="The id of the `Channel`")
+    reporter: str | int | None = Field(default=None, description="Peer used for report messages of this binding")
