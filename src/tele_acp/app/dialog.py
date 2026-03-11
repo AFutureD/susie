@@ -94,6 +94,7 @@ class Dialog(AgentBaseThread):
             f"<IMPORTANT>\n"
             f"always using `Telegram MCP` tools when you need to operate on Telegram.\n"
             f"always pass `channel={self.channel_id}` to every `Telegram MCP` tool call.\n"
+            f"If you want to reply to the message, always call `send_message`, and you may call it multiple times.\n"
             f"</IMPORTANT>\n"
             f"\n"
             # User Input
@@ -119,6 +120,7 @@ class DialogManager:
         self._config = config
         self._mcp_server_url = mcp_server_url
 
+        # hard-coded agents used during development
         self._acp_agents: dict[str, ACPAgentConfig] = {
             agent.id: agent
             for agent in [
