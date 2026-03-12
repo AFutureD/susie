@@ -58,7 +58,7 @@ class TGClient(telethon.TelegramClient, TGActionProvider):
         return TGClient(session=session, api_id=api_id, api_hash=api_hash)
 
     @staticmethod
-    def create_as_login(api_id: int | None, api_hash: str | None, config: types.TelegramUserChannel | types.TelegramBotChannel) -> TGClient:
+    def create_as_login(api_id: int | None, api_hash: str | None, config: types.TypeTelegramChannel) -> TGClient:
         session_name = config.session_name
         api_id = api_id or types.DEFAULT_TELEGRAM_API_ID
         api_hash = api_hash or types.DEFAULT_TELEGRAM_API_HASH
