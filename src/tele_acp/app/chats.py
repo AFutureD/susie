@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import signal
 from abc import abstractmethod
 from typing import AsyncIterator, Awaitable, Callable, Protocol, Self
 
@@ -9,7 +10,7 @@ from telethon.custom import Message
 
 from tele_acp import types
 from tele_acp.telegram import TGClient
-from tele_acp.types import AcpMessage, Config
+from tele_acp.types import AcpMessage, Config, TelegramUserChannel
 
 
 def convert_acp_message_to_chat_message(message: AcpMessage) -> ChatMessage:
@@ -55,7 +56,7 @@ class Channel(Protocol):
 
     @abstractmethod
     async def receive_message(self, message: ChatMessage):
-        """Channel Inobound"""
+        """Channel Inbound"""
         ...
 
 
@@ -193,7 +194,6 @@ class ChannelHub:
                     await stack.enter_async_context(channel.run_until_finish())
 
                     self._channels[channel.channel_id] = channel
-
             yield self
 
     async def _on_receive_new_message(self, message: ChatMessage) -> None:
@@ -239,3 +239,20 @@ class APP:
     async def run_forever(self) -> None:
         async with self.run():
             await self.wait()
+
+
+config = Config(channels=[TelegramUserChannel(id="default")])
+app = APP(config)
+
+
+async def main():
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, app.shutdown)
+
+    # Pattern A: one-liner
+    await app.run_forever()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
