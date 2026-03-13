@@ -3,7 +3,7 @@ from typing import Self
 from pydantic import BaseModel, Field, model_validator
 
 from .agent import DEFAULT_AGENT_ID, AgentConfig
-from .channel import DEFAULT_TELEGRAM_ID, DialogBind, TelegramBotChannel, TelegramUserChannel
+from .channel import DEFAULT_CHANNEL_ID, DialogBind, TelegramBotChannel, TelegramUserChannel
 
 
 class Config(BaseModel):
@@ -21,7 +21,7 @@ class Config(BaseModel):
         channel_ids = map(lambda x: x.id, self.channels)
         channel_id_set = set(channel_ids)
         assert len(self.channels) >= 1, "At least one channel is required"
-        assert DEFAULT_TELEGRAM_ID in channel_id_set, "Default channel must be present"
+        assert DEFAULT_CHANNEL_ID in channel_id_set, "Default channel must be present"
         assert len(self.channels) == len(channel_id_set), "Channel ids must be unique"
         assert len(self.channels) <= 1 or all(channel.session_name is not None for channel in self.channels), "session_name must be provided for all channels"
 

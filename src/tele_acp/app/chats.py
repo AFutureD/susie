@@ -12,6 +12,7 @@ from telethon.custom import Message
 from tele_acp import types
 from tele_acp.telegram import TGClient
 from tele_acp.types import AcpMessage, Config, TelegramUserChannel, peer_hash_into_str
+from tele_acp.types.config import DEFAULT_AGENT_ID, DEFAULT_CHANNEL_ID, DialogBind
 
 
 def convert_acp_message_to_chat_message(message: AcpMessage) -> ChatMessage:
@@ -30,9 +31,9 @@ def convert_telegram_message_to_chat_message(channel_id: str, message: Message, 
 
 class ChatReplierHub:
     def __init__(self) -> None:
-        self._repliers: dict[str, ChatReplier] = {}
+        self._repliers: dict[str, ChatMessageReplyable] = {}
 
-    def get_replier(self, agent_id: str) -> ChatReplier | None:
+    def get_replier(self, agent_id: str) -> ChatMessageReplyable | None:
         return self._repliers.get(agent_id)
 
 
@@ -157,25 +158,34 @@ class ChatManager:
         pass
 
     async def receive_message(self, message: ChatMessage):
-        chat = await self.get_chat(message.channel_id)
+        chat = await self.get_chat(message.channel_id, message.chat_id)
         await chat.receive_message(message)
 
-    async def get_chat(self, chat_id: str) -> Chat:
+    async def get_chat(self, channel_id: str, chat_id: str) -> Chat:
         if chat := self._chats.get(chat_id):
             return chat
 
-        channel_id = ""
+        binding = await self.get_binding(channel_id, chat_id)
+
         channel = self._channel_hub.get_channel(channel_id)
         assert channel is not None, "channel not found"
 
-        agent_id = ""
-        agent = self._replier_hub.get_replier(agent_id)
-        assert agent is not None, "agent not found"
+        replier_id = binding.agent
+        replier = self._replier_hub.get_replier(replier_id)
+        assert replier is not None, "agent not found"
 
-        chat = Chat(channel, agent)
+        chat = Chat(channel, replier)
 
         self._chats[chat_id] = chat
         return chat
+
+    async def get_binding(self, channel_id: str, chat_id: str) -> DialogBind:
+        _ = channel_id, chat_id
+        return DialogBind(
+            agent=DEFAULT_AGENT_ID,
+            channel=DEFAULT_CHANNEL_ID,
+            reporter=None,
+        )
 
 
 class Router:

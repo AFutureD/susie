@@ -16,7 +16,7 @@ class ChannelConfig(BaseModel):
     type: ChannelType
 
 
-DEFAULT_TELEGRAM_ID = "default"
+DEFAULT_CHANNEL_ID = "default"
 DEFAULT_TELEGRAM_API_ID = 611335
 DEFAULT_TELEGRAM_API_HASH = "d524b414d21f4d37f08684c1df41ac9c"
 
@@ -45,5 +45,5 @@ TypeTelegramChannel: TypeAlias = TelegramUserChannel | TelegramBotChannel
 
 class DialogBind(BaseModel):
     agent: str = Field(default=DEFAULT_AGENT_ID, description="The id of the `Agent`")
-    channel: str = Field(default=DEFAULT_TELEGRAM_ID, description="The id of the `Channel`")
+    channel: str = Field(default=DEFAULT_CHANNEL_ID, description="The id of the `Channel`")
     reporter: str | int | None = Field(default=None, description="Peer used for report messages of this binding")
