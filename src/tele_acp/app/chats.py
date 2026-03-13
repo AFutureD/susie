@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 import signal
 from abc import abstractmethod
-from typing import AsyncIterator, Awaitable, Callable, Protocol, Self
+from typing import AsyncIterator, Awaitable, Callable, Protocol
 
 import telethon
 from pydantic.dataclasses import dataclass
@@ -219,26 +219,16 @@ class APP:
 
         self._shutdown = asyncio.Event()
 
-    @contextlib.asynccontextmanager
-    async def run(self) -> AsyncIterator[Self]:
-
+    async def startup(self) -> None:
         async with contextlib.AsyncExitStack() as stack:
             await stack.enter_async_context(self._channel_hub.run())
 
-            try:
-                yield self
-            finally:
-                self._router.stop_accepting()
+            await self._shutdown.wait()
+
+            self._router.stop_accepting()
 
     def shutdown(self) -> None:
         self._shutdown.set()
-
-    async def wait(self) -> None:
-        await self._shutdown.wait()
-
-    async def run_forever(self) -> None:
-        async with self.run():
-            await self.wait()
 
 
 config = Config(channels=[TelegramUserChannel(id="default")])
@@ -250,8 +240,7 @@ async def main():
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, app.shutdown)
 
-    # Pattern A: one-liner
-    await app.run_forever()
+    await app.startup()
 
 
 if __name__ == "__main__":
