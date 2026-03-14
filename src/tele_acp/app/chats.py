@@ -38,12 +38,13 @@ class ChatReplierHub:
 
         self.settings: dict[str, AgentConfig] = {agent.id: agent for agent in config.agents}
 
-    def swarn_replier(self, agent_id: str) -> ChatMessageReplyable | None:
+    async def spawn_replier(self, agent_id: str) -> ChatMessageReplyable | None:
         agent_settings = self.settings.get(agent_id)
         if agent_settings is None:
             return None
 
-        replier = ChatReplier(agent_settings, self._acp_hub.build_acp_runtime(agent_settings.acp_id))
+        runtime = await self._acp_hub.build_acp_runtime(agent_settings.acp_id)
+        replier = ChatReplier(agent_settings, runtime)
         return replier
 
 
@@ -55,6 +56,7 @@ class AgentThread(ChatMessageReplyable):
     def __init__(self, settings: AgentConfig, acp_runtime: ACPAgentRuntime):
         self.settings = settings
         self._acp_runtime = acp_runtime
+        self.logger = logging.getLogger(__name__)
 
     async def stop_and_send_message(self, message: str) -> AsyncIterator[AcpMessage]:
         yield AcpMessage(
@@ -69,7 +71,9 @@ class AgentThread(ChatMessageReplyable):
 class ChatReplier(AgentThread, ChatMessageReplyable):
     async def receive_message(self, chat: Chat, message: ChatMessage) -> None:
         prompt = message.parts[0]
-        print(prompt)
+        self.logger.info(prompt)
+
+        await asyncio.sleep(5)
 
         iter = self.stop_and_send_message(prompt)
         async for delta in iter:
@@ -159,7 +163,10 @@ class Chat:
         pass
 
     async def receive_message(self, message: ChatMessage):
-        await self.replier.receive_message(self, message)
+        lifespan = message.lifespan or contextlib.nullcontext()
+
+        async with lifespan:
+            await self.replier.receive_message(self, message)
 
     async def send_message(self, message: ChatMessage):
         await self.channel.send_message(message)
@@ -189,7 +196,7 @@ class ChatManager:
         channel = self._channel_hub.get_channel(channel_id)
         assert channel is not None, "channel not found"
 
-        replier = self._replier_hub.swarn_replier(binding.agent)
+        replier = await self._replier_hub.spawn_replier(binding.agent)
         assert replier is not None, "agent not found"
 
         chat = Chat(channel, replier)
@@ -259,13 +266,23 @@ class ACPAgentRuntime:
     def __init__(self) -> None:
         pass
 
+    @contextlib.asynccontextmanager
+    async def run(self):
+        yield self
+
 
 class ACPRuntimeHub:
     def __init__(self, config: Config) -> None:
         self._config = config
+        self._stack: contextlib.AsyncExitStack | None
 
-    def build_acp_runtime(self, agent_id: str) -> ACPAgentRuntime:
-        return ACPAgentRuntime()
+    async def build_acp_runtime(self, agent_id: str) -> ACPAgentRuntime:
+        assert self._stack is not None
+
+        runtime = ACPAgentRuntime()
+        await self._stack.enter_async_context(runtime.run())
+
+        return runtime
 
     def get_acp_config(self, agent_id: str) -> ACPAgentConfig | None:
         # hard-coded agents used during development
@@ -278,6 +295,12 @@ class ACPRuntimeHub:
         }
 
         return _acp_agents.get(agent_id)
+
+    @contextlib.asynccontextmanager
+    async def run(self):
+        async with contextlib.AsyncExitStack() as stack:
+            self._stack = stack
+            yield self
 
 
 class APP:
@@ -295,12 +318,14 @@ class APP:
         self._router = router
         self._channel_hub = channel_hub
         self._replier_hub = replier_hub
+        self._acp_hub = acp_hub
 
         self._shutdown = asyncio.Event()
 
     async def startup(self) -> None:
         async with contextlib.AsyncExitStack() as stack:
             await stack.enter_async_context(self._channel_hub.run())
+            await stack.enter_async_context(self._acp_hub.run())
 
             await self._shutdown.wait()
 
