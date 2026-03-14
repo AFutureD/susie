@@ -351,7 +351,7 @@ class ACPAgentRuntime:
 
         self._session: acp.NewSessionResponse | None = None
 
-        self._update_queue: asyncio.Queue[ACPUpdateChunk | None] | None = None
+        self._update_queue: asyncio.Queue[ACPUpdateChunk] | None = None
 
         self._lock = asyncio.Lock()
         self._stack: contextlib.AsyncExitStack | None = None
@@ -390,7 +390,7 @@ class ACPAgentRuntime:
 
         message = AcpMessage(prompt=prompt, model=None, usage=None)
 
-        update_queue = asyncio.Queue[ACPUpdateChunk | None]()
+        update_queue = asyncio.Queue[ACPUpdateChunk]()
         self._update_queue = update_queue
 
         stop_token = asyncio.Event()
@@ -435,10 +435,9 @@ class ACPAgentRuntime:
         finally:
             self._update_queue = None
 
-            if not task.done():
-                task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
 
     async def stop(self) -> None:
         conn = await self._ensure_conn()
