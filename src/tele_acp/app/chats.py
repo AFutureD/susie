@@ -9,7 +9,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Protocol
 import acp
 import telethon
 from acp.client.connection import ClientSideConnection
-from acp.schema import HttpMcpServer, McpServerStdio, SseMcpServer
+from acp.schema import HttpMcpServer, Implementation, McpServerStdio, SseMcpServer
 from pydantic import ConfigDict, Field
 from pydantic.dataclasses import dataclass
 from telethon.custom import Message
@@ -26,7 +26,7 @@ def convert_acp_message_to_chat_message(channel_id: str, chat_id: str, message: 
     text = message.markdown()
     parts = [text] if text else []
 
-    return ChatMessage(id=None, channel_id="", chat_id="", parts=parts)
+    return ChatMessage(id=None, channel_id=channel_id, chat_id=chat_id, parts=parts)
 
 
 def convert_telegram_message_to_chat_message(channel_id: str, message: Message, lifespan: contextlib.AbstractAsyncContextManager | None = None) -> ChatMessage:
@@ -81,7 +81,7 @@ class ChatReplier(AgentThread, ChatMessageReplyable):
 
         stream = self.stop_and_send_message(prompt)
         async for delta in stream:
-            msg = convert_acp_message_to_chat_message(message.channel_id, message.chat_id, delta)
+            msg = convert_acp_message_to_chat_message(message.channel_id, chat.id, delta)
             await chat.send_message(msg)
 
 
@@ -354,7 +354,7 @@ class ACPAgentRuntime:
     ) -> None:
         self._agent_config = agent_config
         self._cwd = str(Path(cwd or Path.cwd()).resolve())
-        self._logger = logger or logging.getLogger(f"{__name__}.{self.__class__.__name__}:{agent_config.id}")
+        self.logger = logger or logging.getLogger(f"{__name__}.{self.__class__.__name__}:{agent_config.id}")
 
         self._mcp_servers = mcp_servers
 
@@ -407,26 +407,23 @@ class ACPAgentRuntime:
         async def turn_task() -> acp.PromptResponse:
             ret = await conn.prompt(prompt=prompt, session_id=session.session_id)
             stop_token.set()
+            self.logger.info("End Prompt 1")
             return ret
 
         task = asyncio.create_task(turn_task())
+        self.logger.info("Prompting ACP agent...")
 
         try:
             while True:
                 update = await update_queue.get()
-                if update is None:
-                    if stop_token.is_set():
-                        break
-                    continue
+                if stop_token.is_set():
+                    break
+
+                self.logger.info(f"Received update: {update}")
 
                 match update:
-                    case acp.schema.AgentMessageChunk():
-                        message.chunks.append(update)
-                    case acp.schema.AgentThoughtChunk():
-                        message.chunks.append(update)
-                    case acp.schema.ToolCallStart():
-                        message.chunks.append(update)
-                    case acp.schema.ToolCallProgress():
+                    case acp.schema.AgentMessageChunk() | acp.schema.AgentThoughtChunk() | acp.schema.ToolCallStart() | acp.schema.ToolCallProgress():
+                        message.delta = update
                         message.chunks.append(update)
                     case acp.schema.CurrentModeUpdate():
                         message.model = update
@@ -440,6 +437,8 @@ class ACPAgentRuntime:
             response = await task  # unlikely raise error
             message.stopReason = response.stop_reason
             yield message
+
+            self.logger.info("End Prompt 2")
 
         finally:
             self._update_queue = None
@@ -460,10 +459,13 @@ class ACPAgentRuntime:
     async def _new_session(self) -> acp.NewSessionResponse:
         conn = await self._ensure_conn()
 
-        session = await conn.new_session(cwd=self._cwd, mcp_servers=self._mcp_servers)
-        self._session = session
-
-        return session
+        try:
+            session = await conn.new_session(cwd=self._cwd, mcp_servers=self._mcp_servers)
+            self._session = session
+            return session
+        except Exception as e:
+            self.logger.error(f"Failed to create session: {e}")
+            raise
 
     async def _start(self):
         if self._stack is not None:
@@ -471,34 +473,37 @@ class ACPAgentRuntime:
 
         agent_config = self._agent_config
 
-        async with contextlib.AsyncExitStack() as stack:
-            try:
-                acp_client = ACPClient(self._handle_session_update, self._logger)
+        stack = contextlib.AsyncExitStack()
+        try:
+            acp_client = ACPClient(self._handle_session_update, self.logger)
 
-                conn, proc = await stack.enter_async_context(
-                    acp.spawn_agent_process(
-                        acp_client,
-                        agent_config.acp_path,
-                        *agent_config.acp_args,
-                        cwd=self._cwd,
-                        transport_kwargs={
-                            "limit": 10 * (2**10) * (2**10),  # Buffer Limit 10MB,
-                        },
-                    )
+            conn, proc = await stack.enter_async_context(
+                acp.spawn_agent_process(
+                    acp_client,
+                    agent_config.acp_path,
+                    *agent_config.acp_args,
+                    cwd=self._cwd,
+                    transport_kwargs={
+                        "limit": 10 * (2**10) * (2**10),  # Buffer Limit 10MB,
+                    },
                 )
+            )
 
-                await conn.initialize(
-                    protocol_version=acp.PROTOCOL_VERSION,
-                    client_info=acp.Implementation(name="tele-acp", title="tele-acp", version=VERSION),
-                )
-            except Exception as e:
-                self._logger.error(f"Failed to start ACP agent process, Error: {e}", e)
-                raise
+            ret = await conn.initialize(
+                protocol_version=acp.PROTOCOL_VERSION,
+                client_info=Implementation(name="tele-acp", title="tele-acp", version=VERSION),
+            )
+            self.logger.info(f"Initialized ACP agent process: {ret}")
 
             async with self._lock:
                 self._stack = stack
                 self._conn = conn
                 self._proc = proc
+
+        except Exception as e:
+            self.logger.error(f"Failed to start ACP agent process, Error: {e}", e)
+            await stack.aclose()
+            raise
 
     async def _stop(self) -> None:
         async with self._lock:

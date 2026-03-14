@@ -20,6 +20,8 @@ class AcpMessage(BaseModel):
 
     # sessonInfo: acp.schema.SessionInfoUpdate
     model: acp.schema.CurrentModeUpdate | None = None
+
+    delta: AcpAgentMessageChunk | None = None
     chunks: list[AcpAgentMessageChunk] = []
 
     usage: acp.schema.UsageUpdate | None = None
