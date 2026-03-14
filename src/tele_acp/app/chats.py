@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 import signal
 from abc import abstractmethod
 from typing import Any, AsyncIterator, Awaitable, Callable, Protocol
@@ -102,6 +103,7 @@ class TelegramChannel(Channel):
         self._tele_client = tele_client
         self._message_handler = message_handler
         self.channel_id = settings.id
+        self.logger = logging.getLogger(f"{self.__class__.__name__}:{self.channel_id}")
 
     @contextlib.asynccontextmanager
     async def run_until_finish(self):
@@ -110,8 +112,8 @@ class TelegramChannel(Channel):
             yield
 
     async def send_message(self, message: ChatMessage):
-        await self._tele_client.send_message("me")
-        pass
+        # await self._tele_client.send_message("me")
+        self.logger.info(f"send_message: {message}")
 
     async def receive_message(self, message: ChatMessage):
         await self._message_handler(message)
@@ -121,7 +123,11 @@ class TelegramChannel(Channel):
 
         message = event.message
 
-        chat_message = convert_telegram_message_to_chat_message(self.channel_id, message, lifespan=self.build_message_lifespan(message.peer_id))
+        peer_id = message.peer_id
+        if not isinstance(peer_id, telethon.types.PeerUser):
+            return
+
+        chat_message = convert_telegram_message_to_chat_message(self.channel_id, message, lifespan=self.build_message_lifespan(peer_id))
         await self.receive_message(chat_message)
 
     @contextlib.asynccontextmanager
