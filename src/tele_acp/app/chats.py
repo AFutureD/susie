@@ -22,7 +22,7 @@ from tele_acp.types import AcpContentBlock, AcpMessage, AgentConfig, Config, Tel
 from tele_acp.types.config import DEFAULT_AGENT_ID, DEFAULT_CHANNEL_ID, DialogBind
 
 
-def convert_acp_message_to_chat_message(message: AcpMessage) -> ChatMessage:
+def convert_acp_message_to_chat_message(channel_id: str, chat_id: str, message: AcpMessage) -> ChatMessage:
     text = message.markdown()
     parts = [text] if text else []
 
@@ -81,11 +81,16 @@ class ChatReplier(AgentThread, ChatMessageReplyable):
 
         stream = self.stop_and_send_message(prompt)
         async for delta in stream:
-            msg = convert_acp_message_to_chat_message(delta)
+            msg = convert_acp_message_to_chat_message(message.channel_id, message.chat_id, delta)
             await chat.send_message(msg)
 
 
 class Channel(Protocol):
+    @property
+    def id(self) -> str:
+        """Channel ID"""
+        ...
+
     @contextlib.asynccontextmanager
     async def run_until_finish(self):
         yield
@@ -110,8 +115,12 @@ class TelegramChannel(Channel):
         tele_client.add_event_handler(self._on_reveive_new_message_event, telethon.events.NewMessage())
         self._tele_client = tele_client
         self._message_handler = message_handler
-        self.channel_id = settings.id
-        self.logger = logging.getLogger(f"{self.__class__.__name__}:{self.channel_id}")
+        self._id = settings.id
+        self.logger = logging.getLogger(f"{self.__class__.__name__}:{self.id}")
+
+    @property
+    def id(self) -> str:
+        return self._id
 
     @contextlib.asynccontextmanager
     async def run_until_finish(self):
@@ -135,7 +144,7 @@ class TelegramChannel(Channel):
         if not isinstance(peer_id, telethon.types.PeerUser):
             return
 
-        chat_message = convert_telegram_message_to_chat_message(self.channel_id, message, lifespan=self.build_message_lifespan(peer_id))
+        chat_message = convert_telegram_message_to_chat_message(self.id, message, lifespan=self.build_message_lifespan(peer_id))
         await self.receive_message(chat_message)
 
     @contextlib.asynccontextmanager
@@ -161,10 +170,10 @@ class ChatMessage:
 
 
 class Chat:
-    def __init__(self, channel: Channel, replier: ChatMessageReplyable):
+    def __init__(self, chat_id: str, channel: Channel, replier: ChatMessageReplyable):
+        self.id = chat_id
         self.replier = replier
         self.channel = channel
-        pass
 
     async def receive_message(self, message: ChatMessage):
         lifespan = message.lifespan or contextlib.nullcontext()
@@ -203,7 +212,7 @@ class ChatManager:
         replier = await self._replier_hub.spawn_replier(binding.agent)
         assert replier is not None, "agent not found"
 
-        chat = Chat(channel, replier)
+        chat = Chat(chat_id, channel, replier)
 
         self._chats[chat_id] = chat
         return chat
@@ -243,7 +252,7 @@ class ChannelHub:
 
         for channel_settings in self._config.channels:
             channel = TelegramChannel(channel_settings, self._on_receive_new_message)
-            self._channels[channel.channel_id] = channel
+            self._channels[channel.id] = channel
 
     def set_router(self, router: Router) -> None:
         self._router = router
@@ -278,7 +287,7 @@ class ACPRuntimeHub:
         assert acp_config is not None, "acp agent not found"
 
         runtime = ACPAgentRuntime(acp_config, cwd=agent.work_dir)
-        await self._stack.enter_async_context(runtime.run())
+        await self._stack.enter_async_context(runtime)
 
         return runtime
 
@@ -419,8 +428,6 @@ class ACPAgentRuntime:
                         message.chunks.append(update)
                     case acp.schema.ToolCallProgress():
                         message.chunks.append(update)
-                    case acp.schema.AgentPlanUpdate():
-                        message.chunks.append(update)
                     case acp.schema.CurrentModeUpdate():
                         message.model = update
                     case acp.schema.UsageUpdate():
@@ -430,8 +437,10 @@ class ACPAgentRuntime:
 
                 yield message
 
-            response = await task
+            response = await task  # unlikely raise error
             message.stopReason = response.stop_reason
+            yield message
+
         finally:
             self._update_queue = None
 
@@ -508,14 +517,6 @@ class ACPAgentRuntime:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self._stop()
-
-    @contextlib.asynccontextmanager
-    async def run(self):
-        await self._start()
-        try:
-            yield self
-        finally:
-            await self._stop()
 
     async def _handle_session_update(self, session_id: str, update: ACPUpdateChunk) -> None:
         queue = self._update_queue
