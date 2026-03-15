@@ -378,13 +378,15 @@ class ACPAgentRuntime:
         await self._stop()
         await self._start()
 
-    async def _ensure_conn(self) -> ClientSideConnection:
+    @property
+    async def conn(self) -> ClientSideConnection:
         await self._start()
         if self._conn is None:
             raise RuntimeError("ACP connection is not available.")
         return self._conn
 
-    async def _ensure_session(self) -> acp.NewSessionResponse:
+    @property
+    async def session(self) -> acp.NewSessionResponse:
         if self._session:
             return self._session
 
@@ -392,8 +394,8 @@ class ACPAgentRuntime:
         return session
 
     async def prompt(self, parts: list[str]) -> AsyncIterator[AcpMessage]:
-        conn = await self._ensure_conn()
-        session = await self._ensure_session()
+        conn = await self.conn
+        session = await self.session
 
         prompt: list[AcpContentBlock] = list(map(lambda m: acp.text_block(m), parts))
 
@@ -448,8 +450,9 @@ class ACPAgentRuntime:
                 await task
 
     async def stop(self) -> None:
-        conn = await self._ensure_conn()
-        session = await self._ensure_session()
+        conn = await self.conn
+        session = await self.session
+
         await conn.cancel(session_id=session.session_id)
 
     async def new_session(self) -> str:
@@ -457,7 +460,7 @@ class ACPAgentRuntime:
         return session.session_id
 
     async def _new_session(self) -> acp.NewSessionResponse:
-        conn = await self._ensure_conn()
+        conn = await self.conn
 
         try:
             session = await conn.new_session(cwd=self._cwd, mcp_servers=self._mcp_servers)
