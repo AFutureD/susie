@@ -1,17 +1,5 @@
-from pydantic.dataclasses import dataclass
+from .client import ACPAgentConfig, ACPClient, ACPUpdateChunk
+from .message import AcpMessage
+from .runtime import ACPAgentRuntime, ACPRuntimeHub
 
-from .client import ACPClient, ACPUpdateChunk
-
-__all__ = ["ACPClient", "ACPUpdateChunk"]
-
-
-# curl https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json
-# https://github.com/agentclientprotocol/registry/blob/main/agent.schema.json
-
-
-@dataclass
-class ACPAgentConfig:
-    id: str
-    name: str
-    acp_path: str
-    acp_args: list[str]
+__all__ = ["ACPClient", "ACPUpdateChunk", "ACPAgentRuntime", "ACPAgentConfig", "AcpMessage", "ACPRuntimeHub"]

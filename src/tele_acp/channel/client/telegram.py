@@ -187,7 +187,7 @@ class TGClient(telethon.TelegramClient, TGActionProvider):
         nosound_video: bool | None = None,
         send_as: hints.EntityLike | None = None,
         message_effect_id: int | None = None,
-    ) -> telethon.types.Message:
+    ) -> telethon.types.Message:  # ty:ignore[invalid-method-override]
         """Send a message to a Telegram entity.
 
         entity resolution:

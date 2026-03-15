@@ -12,6 +12,6 @@ async def mainloop(cli_args: SharedArgs) -> bool:
     config = load_config(config_file=cli_args.config_file)
     app = APP(config)
 
-    await app.run_until_finish()
+    await app.startup()
 
     return True

@@ -8,8 +8,6 @@ import typer
 
 from tele_acp.config import load_config
 from tele_acp.constant import VERSION
-from tele_acp.telegram import TGClient
-from tele_acp.types import Format
 from tele_acp.utils import fmt, print
 
 from .auth import auth_cli
@@ -73,20 +71,18 @@ def main(
         str | None,
         typer.Option(help="Session name. List via `tele auth list`. \\[default: Current]"),
     ] = None,
-    fmt: Annotated[
-        Format,
-        typer.Option("--format", "-f", help="Output format."),
-    ] = Format.text,
 ) -> None:
     """Hei Hei"""
     _ = version
 
-    ctx.obj = SharedArgs(fmt=fmt, config_file=config_file, session=session)
+    ctx.obj = SharedArgs(config_file=config_file, session=session)
 
 
 @cli.command(name="me")
 def me_get(ctx: typer.Context) -> None:
     """Show the current authenticated Telegram account."""
+    from tele_acp.channel.client import TGClient
+
     cli_args: SharedArgs = ctx.obj
 
     async def _run() -> bool:

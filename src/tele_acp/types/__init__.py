@@ -1,33 +1,25 @@
-from typing import TypeAlias
-
-from .acp import AcpAgentMessageChunk, AcpContentBlock, AcpMessage
 from .agent import AgentConfig
-from .channel import DEFAULT_TELEGRAM_API_HASH, DEFAULT_TELEGRAM_API_ID, TelegramBotChannel, TelegramUserChannel, TypeTelegramChannel
-from .config import Config
+from .channel import Channel
+from .chat import Chatable, ChatMessage, ChatMessageReplyable
+from .config import DEFAULT_CHANNEL_ID, Config, TelegramBotChannel, TelegramUserChannel, TypeTelegramChannel
 from .error import ConfigError, CurrentSessionPathNotValidError, unreachable
-from .serialization import Format, Order
 from .session import SessionInfo
 from .tl import peer_hash_into_str
-
-OutBoundMessage: TypeAlias = str | AcpMessage
 
 __all__ = [
     "Config",
     "ConfigError",
     "CurrentSessionPathNotValidError",
     "SessionInfo",
-    "Format",
-    "Order",
     "peer_hash_into_str",
     "unreachable",
     "AgentConfig",
-    "AcpAgentMessageChunk",
-    "AcpContentBlock",
-    "AcpMessage",
-    "OutBoundMessage",
     "TelegramUserChannel",
     "TelegramBotChannel",
     "TypeTelegramChannel",
-    "DEFAULT_TELEGRAM_API_ID",
-    "DEFAULT_TELEGRAM_API_HASH",
+    "ChatMessage",
+    "Chatable",
+    "ChatMessageReplyable",
+    "Channel",
+    "DEFAULT_CHANNEL_ID",
 ]
