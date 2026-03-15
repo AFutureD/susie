@@ -5,7 +5,7 @@ from typing import AsyncIterator, Awaitable, Callable
 import telethon
 from telethon.tl.custom import Message as TeleMessage
 
-from tele_acp.types import Channel, ChatMessage, ChatMessageTextPart, ClassMessagePart, TypeTelegramChannel, peer_hash_into_str
+from tele_acp.types import Channel, ChatMessage, ChatMessagePart, ChatMessageTextPart, TypeTelegramChannel, peer_hash_into_str
 
 from .client import TGClient
 
@@ -19,7 +19,7 @@ def convert_telegram_message_to_chat_message(
     chat_id: str = peer_hash_into_str(message.peer_id)
 
     text_part: str | None = message.message
-    parts: list[ClassMessagePart] = [ChatMessageTextPart(text_part)] if text_part else []
+    parts: list[ChatMessagePart] = [ChatMessageTextPart(text_part)] if text_part else []
 
     return ChatMessage(id=message_id, channel_id=channel_id, chat_id=chat_id, parts=parts, lifespan=lifespan)
 

@@ -2,12 +2,12 @@ import logging
 from typing import AsyncIterator
 
 from tele_acp.acp import ACPAgentRuntime, AcpMessage
-from tele_acp.types import AgentConfig, Chatable, ChatMessage, ChatMessageReplyable, ChatMessageTextPart, ClassMessagePart
+from tele_acp.types import AgentConfig, Chatable, ChatMessage, ChatMessagePart, ChatMessageReplyable, ChatMessageTextPart
 
 
 def convert_acp_message_to_chat_message(channel_id: str, chat_id: str, message: AcpMessage) -> ChatMessage:
     text = message.markdown()
-    parts: list[ClassMessagePart] = [ChatMessageTextPart(text)] if text else []
+    parts: list[ChatMessagePart] = [ChatMessageTextPart(text)] if text else []
 
     return ChatMessage(id=None, channel_id=channel_id, chat_id=chat_id, parts=parts)
 
