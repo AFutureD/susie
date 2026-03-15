@@ -15,7 +15,7 @@ class ChatMessageTextPart:
     text: str = Field(description="The text of the message")
 
 
-ClassMessagePart: TypeAlias = ChatMessageFilePart | ChatMessageTextPart
+ChatMessagePart: TypeAlias = ChatMessageFilePart | ChatMessageTextPart
 
 
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
@@ -25,7 +25,7 @@ class ChatMessage:
     id: str | None = Field(description="The identifier of the message in the chat")
     channel_id: str = Field(description="Which channel this message was sent from")
     chat_id: str = Field(description="Which chat this message wants to be sent to")
-    parts: list[ClassMessagePart] = Field(default_factory=list, description="The Message. Ordered.")
+    parts: list[ChatMessagePart] = Field(default_factory=list, description="The Message. Ordered.")
     lifespan: contextlib.AbstractAsyncContextManager | None = Field(default=None, exclude=True)
     meta: dict[str, Any] = Field(default_factory=dict, description="Metadata for the message")
 

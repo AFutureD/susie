@@ -5,7 +5,7 @@ from typing import cast
 from mcp.server.fastmcp import Context, FastMCP
 
 from tele_acp.chat import Chat, ChatManager
-from tele_acp.types import ChatMessage
+from tele_acp.types import ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageTextPart
 
 
 class MCP(FastMCP):
@@ -49,24 +49,15 @@ async def send_message(
     content: str,
     file: list[str] | None = None,
 ) -> str | None:
-    """Send a message to a Telegram entity on the given channel.
+    """Send a message to a Chat By channel_id and chat_id.
 
     Args:
-        channel:
-            The Telegram channel id configured in tele-acp.
-        entity:
-            `peer id` or `username` or `phone`
-
-            - `int`: treated as a `peer id` (see https://core.telegram.org/api/peers#peer-id).
-            - `str`: first try Telethon's resolver (username, phone, etc).
-
-            If that fails, fall back to scanning dialogs and picking the *unique* match by:
-                - dialog name contains `entity` (case-insensitive), or
-                - dialog peer id equals `entity`, or
-                - dialog entity id equals `entity`.
-
-        message: The content string of the message.
-
+        channel_id:
+            The channel_id.
+        chat_id:
+            The chat_id
+        content:
+            The content string of the message.
         file:
             The file path.
 
@@ -79,7 +70,12 @@ async def send_message(
 
     """
     chat = await cast(MCP, ctx.fastmcp).get_chat(channel_id, chat_id)
-    message = ChatMessage(id=None, channel_id=channel_id, chat_id=chat_id, parts=[content])
+
+    parts: list[ChatMessagePart] = []
+    parts += [ChatMessageTextPart(content)]
+    parts += list(map(lambda f: ChatMessageFilePart(path=f), file)) if file else []
+
+    message = ChatMessage(id=None, channel_id=channel_id, chat_id=chat_id, parts=parts)
 
     try:
         await chat.send_message(message)

@@ -16,7 +16,7 @@ from telethon.tl.types.contacts import Contacts
 from telethon.types import PeerUser
 
 from tele_acp.session import TGSession, load_session, session_ensure_current_valid
-from tele_acp.types import DEFAULT_TELEGRAM_API_HASH, DEFAULT_TELEGRAM_API_ID
+from tele_acp.types import DEFAULT_TELEGRAM_API_HASH, DEFAULT_TELEGRAM_API_ID, SessionInfo, TypeTelegramChannel
 from tele_acp.utils.fmt import format_me
 
 
@@ -58,7 +58,7 @@ class TGClient(telethon.TelegramClient, TGActionProvider):
         return TGClient(session=session, api_id=api_id, api_hash=api_hash)
 
     @staticmethod
-    def create_as_login(api_id: int | None, api_hash: str | None, config: types.TypeTelegramChannel) -> TGClient:
+    def create_as_login(api_id: int | None, api_hash: str | None, config: TypeTelegramChannel) -> TGClient:
         session_name = config.session_name
         api_id = api_id or DEFAULT_TELEGRAM_API_ID
         api_hash = api_hash or DEFAULT_TELEGRAM_API_HASH
@@ -138,7 +138,7 @@ class TGClient(telethon.TelegramClient, TGActionProvider):
         except KeyboardInterrupt:
             session_ensure_current_valid(session=None)
 
-    async def get_session_info(self) -> types.SessionInfo | None:
+    async def get_session_info(self) -> SessionInfo | None:
         try:
             me = await self.get_user()
 
@@ -152,7 +152,7 @@ class TGClient(telethon.TelegramClient, TGActionProvider):
 
             session_path = Path(session.filename)
 
-            return types.SessionInfo(
+            return SessionInfo(
                 path=session_path,
                 session_name=session_path.stem,
                 user_id=me.id,
