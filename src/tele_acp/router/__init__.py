@@ -1,9 +1,8 @@
-from tele_acp.chat.manager import ChatManager
-from tele_acp.types import ChatMessage
+from tele_acp.types import Chatable, ChatMessage
 
 
 class Router:
-    def __init__(self, chat_handler: ChatManager):
+    def __init__(self, chat_handler: Chatable):
         self._chat_handler = chat_handler
         self._accepting = True
 

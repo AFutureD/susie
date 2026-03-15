@@ -1,4 +1,4 @@
 from . import fmt
-from .output import get_str_len_for_int, print
+from .output import get_str_len_for_int
 
-__all__ = ["fmt", "print", "get_str_len_for_int"]
+__all__ = ["fmt", "get_str_len_for_int"]

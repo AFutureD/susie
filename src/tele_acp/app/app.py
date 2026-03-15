@@ -7,9 +7,8 @@ from tele_acp.acp import ACPRuntimeHub
 from tele_acp.channel import ChannelHub
 from tele_acp.chat import ChatManager
 from tele_acp.replier import ChatReplierHub
+from tele_acp.router import Router
 from tele_acp.types import Config
-
-from .router import Router
 
 
 class APP:

@@ -2,7 +2,7 @@ import contextlib
 from abc import abstractmethod
 from typing import Protocol
 
-from tele_acp.types import ChatMessage
+from .chat import ChatMessage
 
 
 class Channel(Protocol):

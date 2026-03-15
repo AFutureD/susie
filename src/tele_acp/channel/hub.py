@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 from typing import AsyncIterator
 
-from tele_acp.app.router import Router
+from tele_acp.router import Router
 from tele_acp.types import Channel, ChatMessage, Config
 
 from .telegram import TelegramChannel

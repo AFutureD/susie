@@ -1,13 +1,13 @@
 from tele_acp.channel.hub import ChannelHub
 from tele_acp.replier.hub import ChatReplierHub
-from tele_acp.types import ChatMessage, Config
+from tele_acp.types import Chatable, ChatMessage, Config
 from tele_acp.types.agent import DEFAULT_AGENT_ID
 from tele_acp.types.config import DEFAULT_CHANNEL_ID, DialogBind
 
 from .chat import Chat
 
 
-class ChatManager:
+class ChatManager(Chatable):
     def __init__(self, config: Config, channel_hub: ChannelHub, replier_hub: ChatReplierHub):
         self._config = config
         self._channel_hub = channel_hub

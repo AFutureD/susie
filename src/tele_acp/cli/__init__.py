@@ -5,10 +5,11 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from rich import print
 
 from tele_acp.config import load_config
 from tele_acp.constant import VERSION
-from tele_acp.utils import fmt, print
+from tele_acp.utils import fmt
 
 from .auth import auth_cli
 from .mainloop import mainloop
@@ -100,7 +101,7 @@ def me_get(ctx: typer.Context) -> None:
         if not me:
             return False
 
-        print(fmt.format_me(me, cli_args.fmt), fmt=cli_args.fmt)
+        print(fmt.format_me(me))
         return True
 
     ok = asyncio.run(_run())
