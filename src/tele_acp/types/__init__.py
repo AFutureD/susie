@@ -1,7 +1,7 @@
 from .agent import AgentConfig
 from .channel import Channel
-from .chat import Chatable, ChatMessage, ChatMessageReplyable
-from .config import DEFAULT_CHANNEL_ID, Config, TelegramBotChannel, TelegramUserChannel, TypeTelegramChannel
+from .chat import Chatable, ChatMessage, ChatMessageFilePart, ChatMessageReplyable, ChatMessageTextPart, ClassMessagePart
+from .config import DEFAULT_CHANNEL_ID, DEFAULT_TELEGRAM_API_HASH, DEFAULT_TELEGRAM_API_ID, Config, TelegramBotChannel, TelegramUserChannel, TypeTelegramChannel
 from .error import ConfigError, CurrentSessionPathNotValidError, unreachable
 from .session import SessionInfo
 from .tl import peer_hash_into_str
@@ -22,4 +22,9 @@ __all__ = [
     "ChatMessageReplyable",
     "Channel",
     "DEFAULT_CHANNEL_ID",
+    "ChatMessageFilePart",
+    "ChatMessageTextPart",
+    "ClassMessagePart",
+    "DEFAULT_TELEGRAM_API_ID",
+    "DEFAULT_TELEGRAM_API_HASH",
 ]

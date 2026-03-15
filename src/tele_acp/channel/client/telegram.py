@@ -15,8 +15,8 @@ from telethon.tl.functions.account import GetAuthorizationsRequest
 from telethon.tl.types.contacts import Contacts
 from telethon.types import PeerUser
 
-from tele_acp import types
 from tele_acp.session import TGSession, load_session, session_ensure_current_valid
+from tele_acp.types import DEFAULT_TELEGRAM_API_HASH, DEFAULT_TELEGRAM_API_ID
 from tele_acp.utils.fmt import format_me
 
 
@@ -51,8 +51,8 @@ class TGActionProvider(Protocol):
 class TGClient(telethon.TelegramClient, TGActionProvider):
     @staticmethod
     def create_simple(api_id: int | None, api_hash: str | None, session_name: str | None, with_current: bool = True) -> TGClient:
-        api_id = api_id or types.DEFAULT_TELEGRAM_API_ID
-        api_hash = api_hash or types.DEFAULT_TELEGRAM_API_HASH
+        api_id = api_id or DEFAULT_TELEGRAM_API_ID
+        api_hash = api_hash or DEFAULT_TELEGRAM_API_HASH
 
         session: TGSession = load_session(session_name, with_current=with_current)
         return TGClient(session=session, api_id=api_id, api_hash=api_hash)
@@ -60,8 +60,8 @@ class TGClient(telethon.TelegramClient, TGActionProvider):
     @staticmethod
     def create_as_login(api_id: int | None, api_hash: str | None, config: types.TypeTelegramChannel) -> TGClient:
         session_name = config.session_name
-        api_id = api_id or types.DEFAULT_TELEGRAM_API_ID
-        api_hash = api_hash or types.DEFAULT_TELEGRAM_API_HASH
+        api_id = api_id or DEFAULT_TELEGRAM_API_ID
+        api_hash = api_hash or DEFAULT_TELEGRAM_API_HASH
 
         session: TGSession = load_session(session_name, with_current=False)
         return TGClient(session=session, api_id=api_id, api_hash=api_hash)

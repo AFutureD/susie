@@ -3,20 +3,23 @@ import logging
 from typing import AsyncIterator, Awaitable, Callable
 
 import telethon
+from telethon.tl.custom import Message as TeleMessage
 
-from tele_acp.types import Channel, ChatMessage, TypeTelegramChannel, peer_hash_into_str
+from tele_acp.types import Channel, ChatMessage, ChatMessageTextPart, ClassMessagePart, TypeTelegramChannel, peer_hash_into_str
 
 from .client import TGClient
 
 
 def convert_telegram_message_to_chat_message(
-    channel_id: str, message: telethon.tl.custom.Message, lifespan: contextlib.AbstractAsyncContextManager | None = None
+    channel_id: str,
+    message: TeleMessage,
+    lifespan: contextlib.AbstractAsyncContextManager | None = None,
 ) -> ChatMessage:
     message_id = str(message.id)
     chat_id: str = peer_hash_into_str(message.peer_id)
 
     text_part: str | None = message.message
-    parts = [text_part] if text_part else []
+    parts: list[ClassMessagePart] = [ChatMessageTextPart(text_part)] if text_part else []
 
     return ChatMessage(id=message_id, channel_id=channel_id, chat_id=chat_id, parts=parts, lifespan=lifespan)
 
