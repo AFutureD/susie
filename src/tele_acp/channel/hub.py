@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 from typing import AsyncIterator
 
 from tele_acp.router import Router
@@ -12,6 +13,7 @@ class ChannelHub:
     def __init__(self, config: Config, router: Router | None = None) -> None:
         self._config = config
         self._router = router
+        self.logger = logging.getLogger(__name__)
 
         self._channels_lock = asyncio.Lock()
         self._channels: dict[str, Channel] = {}
@@ -31,7 +33,10 @@ class ChannelHub:
         async with contextlib.AsyncExitStack() as stack:
             async with self._channels_lock:
                 for channel in self._channels.values():
-                    await stack.enter_async_context(channel.run_until_finish())
+                    channel: Channel = await stack.enter_async_context(channel.run_until_finish())
+                    if not await channel.status:
+                        raise RuntimeError(f"Channel {channel.id} is not authenticated")
+
             yield self
 
     async def _on_receive_new_message(self, message: ChatMessage) -> None:

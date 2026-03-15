@@ -41,11 +41,15 @@ class TelegramChannel(Channel):
     def id(self) -> str:
         return self._id
 
+    @property
+    async def status(self) -> bool:
+        return await self._tele_client.is_user_authorized()
+
     @contextlib.asynccontextmanager
-    async def run_until_finish(self):
+    async def run_until_finish(self) -> AsyncIterator[Channel]:
         async with contextlib.AsyncExitStack() as stack:
             await stack.enter_async_context(self._tele_client)
-            yield
+            yield self
 
     async def send_message(self, message: ChatMessage):
         # await self._tele_client.send_message("me")

@@ -12,8 +12,8 @@ class Channel(Protocol):
         ...
 
     @contextlib.asynccontextmanager
-    async def run_until_finish(self):
-        yield
+    async def run_until_finish(self) -> AsyncIterator[Channel]:
+        yield self
 
     async def send_message(self, message: ChatMessage):
         """Channel Outbound"""
@@ -22,4 +22,9 @@ class Channel(Protocol):
     @abstractmethod
     async def receive_message(self, message: ChatMessage):
         """Channel Inbound"""
+        ...
+
+    @property
+    async def status(self) -> bool:
+        """Channel Status"""
         ...
