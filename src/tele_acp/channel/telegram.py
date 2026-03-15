@@ -73,4 +73,6 @@ class TelegramChannel(Channel):
     @contextlib.asynccontextmanager
     async def build_message_lifespan(self, peer: telethon.types.TypePeer) -> AsyncIterator[None]:
         async with self._tele_client.with_action(peer, "typing"):
+            self.logger.info("Message lifespan started for peer: %s", peer)
             yield
+        self.logger.info("Message lifespan ended for peer: %s", peer)

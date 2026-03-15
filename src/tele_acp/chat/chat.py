@@ -1,4 +1,5 @@
 import contextlib
+import logging
 
 from tele_acp.types import Channel, Chatable, ChatMessage, ChatMessageReplyable
 
@@ -8,12 +9,15 @@ class Chat(Chatable):
         self.id = chat_id
         self.replier = replier
         self.channel = channel
+        self.logger = logging.getLogger(__name__ + ":" + chat_id)
 
     async def receive_message(self, message: ChatMessage):
         lifespan = message.lifespan or contextlib.nullcontext()
 
         async with lifespan:
+            self.logger.debug("Received message: %s", message)
             await self.replier.receive_message(self, message)
+            self.logger.debug("Replier received message: %s", message)
 
     async def send_message(self, message: ChatMessage):
         await self.channel.send_message(message)

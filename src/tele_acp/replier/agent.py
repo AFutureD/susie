@@ -35,3 +35,4 @@ class ChatReplier(AgentThread, ChatMessageReplyable):
         async for delta in stream:
             msg = convert_acp_message_to_chat_message(message.channel_id, message.chat_id, delta)
             await chat.send_message(msg)
+        self.logger.info("Message sent for peer: %s", message.channel_id)

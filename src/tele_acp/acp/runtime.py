@@ -65,24 +65,24 @@ class ACPAgentRuntime(ACPAgentConnection):
         update_queue = asyncio.Queue[ACPUpdateChunk]()
         self._update_queue = update_queue
 
-        stop_token = asyncio.Event()
-
         async def turn_task() -> acp.PromptResponse:
-            ret = await self.connction.prompt(prompt=prompt, session_id=session.session_id)
-            stop_token.set()
-            self.logger.info("End Prompt 1")
-            return ret
+            try:
+                ret = await self.connction.prompt(prompt=prompt, session_id=session.session_id)
+                return ret
+            finally:
+                update_queue.shutdown()
 
         task = asyncio.create_task(turn_task())
         self.logger.info("Prompting ACP agent...")
 
         try:
             while True:
-                update = await update_queue.get()
-                if stop_token.is_set():
+                try:
+                    update = await update_queue.get()
+                except asyncio.QueueShutDown:
                     break
 
-                self.logger.info(f"Received update: {update}")
+                self.logger.debug(f"Received update: {update}")
 
                 match update:
                     case acp.schema.AgentMessageChunk() | acp.schema.AgentThoughtChunk() | acp.schema.ToolCallStart() | acp.schema.ToolCallProgress():
@@ -101,7 +101,7 @@ class ACPAgentRuntime(ACPAgentConnection):
             message.stopReason = response.stop_reason
             yield message
 
-            self.logger.info("End Prompt 2")
+            self.logger.info("End Prompt")
 
         finally:
             self._update_queue = None
@@ -119,7 +119,10 @@ class ACPAgentRuntime(ACPAgentConnection):
         if session.session_id != session_id:
             return
 
-        await queue.put(update)
+        try:
+            await queue.put(update)
+        except asyncio.QueueShutDown:
+            return
 
 
 class ACPRuntimeHub:
@@ -156,7 +159,10 @@ class ACPRuntimeHub:
         return _acp_agents.get(agent_id)
 
     @contextlib.asynccontextmanager
-    async def run(self) -> AsyncIterator[ACPAgentRuntime]:
+    async def run(self) -> AsyncIterator[ACPRuntimeHub]:
         async with contextlib.AsyncExitStack() as stack:
             self._stack = stack
-            yield self
+            try:
+                yield self
+            finally:
+                self._stack = None
