@@ -342,25 +342,21 @@ class APP:
         self._shutdown.set()
 
 
-class ACPAgentRuntime:
-    """spawn acp client based on ACPAgentConfig and maintain sessions"""
-
+class ACPAgentConnection:
     def __init__(
         self,
         agent_config: ACPAgentConfig,
         cwd: str | Path | None = None,
         mcp_servers: list[HttpMcpServer | SseMcpServer | McpServerStdio] | None = None,
+        on_session_update: Callable[[str, ACPUpdateChunk], Awaitable[None]] | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self._agent_config = agent_config
         self._cwd = str(Path(cwd or Path.cwd()).resolve())
-        self.logger = logger or logging.getLogger(f"{__name__}.{self.__class__.__name__}:{agent_config.id}")
-
         self._mcp_servers = mcp_servers
+        self._on_session_update = on_session_update
 
-        self._session: acp.NewSessionResponse | None = None
-
-        self._update_queue: asyncio.Queue[ACPUpdateChunk] | None = None
+        self.logger = logger or logging.getLogger(f"{__name__}.{self.__class__.__name__}:{agent_config.id}")
 
         self._lock = asyncio.Lock()
         self._stack: contextlib.AsyncExitStack | None = None
@@ -368,107 +364,21 @@ class ACPAgentRuntime:
         self._proc: object | None = None
 
     @property
+    def connction(self) -> ClientSideConnection:
+        if self._conn is None:
+            raise RuntimeError("ACP Connection is not available.")
+        return self._conn
+
+    @property
     async def agent_config(self) -> ACPAgentConfig:
         return self._agent_config
 
-    async def change(self, agent_config: ACPAgentConfig | None) -> None:
+    async def set_agent_config(self, agent_config: ACPAgentConfig | None) -> None:
         if agent_config:
             self._agent_config = agent_config
 
         await self._stop()
         await self._start()
-
-    @property
-    async def conn(self) -> ClientSideConnection:
-        await self._start()
-        if self._conn is None:
-            raise RuntimeError("ACP connection is not available.")
-        return self._conn
-
-    @property
-    async def session(self) -> acp.NewSessionResponse:
-        if self._session:
-            return self._session
-
-        session = await self._new_session()
-        return session
-
-    async def prompt(self, parts: list[str]) -> AsyncIterator[AcpMessage]:
-        conn = await self.conn
-        session = await self.session
-
-        prompt: list[AcpContentBlock] = list(map(lambda m: acp.text_block(m), parts))
-
-        message = AcpMessage(prompt=prompt, model=None, usage=None)
-
-        update_queue = asyncio.Queue[ACPUpdateChunk]()
-        self._update_queue = update_queue
-
-        stop_token = asyncio.Event()
-
-        async def turn_task() -> acp.PromptResponse:
-            ret = await conn.prompt(prompt=prompt, session_id=session.session_id)
-            stop_token.set()
-            self.logger.info("End Prompt 1")
-            return ret
-
-        task = asyncio.create_task(turn_task())
-        self.logger.info("Prompting ACP agent...")
-
-        try:
-            while True:
-                update = await update_queue.get()
-                if stop_token.is_set():
-                    break
-
-                self.logger.info(f"Received update: {update}")
-
-                match update:
-                    case acp.schema.AgentMessageChunk() | acp.schema.AgentThoughtChunk() | acp.schema.ToolCallStart() | acp.schema.ToolCallProgress():
-                        message.delta = update
-                        message.chunks.append(update)
-                    case acp.schema.CurrentModeUpdate():
-                        message.model = update
-                    case acp.schema.UsageUpdate():
-                        message.usage = update
-                    case _:
-                        pass
-
-                yield message
-
-            response = await task  # unlikely raise error
-            message.stopReason = response.stop_reason
-            yield message
-
-            self.logger.info("End Prompt 2")
-
-        finally:
-            self._update_queue = None
-
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
-
-    async def stop(self) -> None:
-        conn = await self.conn
-        session = await self.session
-
-        await conn.cancel(session_id=session.session_id)
-
-    async def new_session(self) -> str:
-        session = await self._new_session()
-        return session.session_id
-
-    async def _new_session(self) -> acp.NewSessionResponse:
-        conn = await self.conn
-
-        try:
-            session = await conn.new_session(cwd=self._cwd, mcp_servers=self._mcp_servers)
-            self._session = session
-            return session
-        except Exception as e:
-            self.logger.error(f"Failed to create session: {e}")
-            raise
 
     async def _start(self):
         if self._stack is not None:
@@ -478,7 +388,7 @@ class ACPAgentRuntime:
 
         stack = contextlib.AsyncExitStack()
         try:
-            acp_client = ACPClient(self._handle_session_update, self.logger)
+            acp_client = ACPClient(self._on_session_update, self.logger)
 
             conn, proc = await stack.enter_async_context(
                 acp.spawn_agent_process(
@@ -525,6 +435,104 @@ class ACPAgentRuntime:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self._stop()
+
+
+class ACPAgentRuntime(ACPAgentConnection):
+    """spawn acp client based on ACPAgentConfig and maintain sessions"""
+
+    def __init__(
+        self,
+        agent_config: ACPAgentConfig,
+        cwd: str | Path | None = None,
+        mcp_servers: list[HttpMcpServer | SseMcpServer | McpServerStdio] | None = None,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        self.logger = logger or logging.getLogger(f"{__name__}.{self.__class__.__name__}:{agent_config.id}")
+        self._update_queue: asyncio.Queue[ACPUpdateChunk] | None = None
+
+        super().__init__(agent_config, cwd, mcp_servers, self._handle_session_update)
+
+        self._session: acp.NewSessionResponse | None = None
+
+    # MARK: Session
+
+    @property
+    async def session(self) -> acp.NewSessionResponse:
+        if self._session:
+            return self._session
+
+        session = await self._new_session()
+        return session
+
+    async def new_session(self) -> str:
+        session = await self._new_session()
+        return session.session_id
+
+    async def _new_session(self) -> acp.NewSessionResponse:
+        try:
+            session = await self.connction.new_session(cwd=self._cwd, mcp_servers=self._mcp_servers)
+            self._session = session
+            return session
+        except Exception as e:
+            self.logger.error(f"Failed to create session: {e}")
+            raise
+
+    # MARK: Prompt
+
+    async def prompt(self, parts: list[str]) -> AsyncIterator[AcpMessage]:
+        session = await self.session
+
+        prompt: list[AcpContentBlock] = list(map(lambda m: acp.text_block(m), parts))
+
+        message = AcpMessage(prompt=prompt, model=None, usage=None)
+
+        update_queue = asyncio.Queue[ACPUpdateChunk]()
+        self._update_queue = update_queue
+
+        stop_token = asyncio.Event()
+
+        async def turn_task() -> acp.PromptResponse:
+            ret = await self.connction.prompt(prompt=prompt, session_id=session.session_id)
+            stop_token.set()
+            self.logger.info("End Prompt 1")
+            return ret
+
+        task = asyncio.create_task(turn_task())
+        self.logger.info("Prompting ACP agent...")
+
+        try:
+            while True:
+                update = await update_queue.get()
+                if stop_token.is_set():
+                    break
+
+                self.logger.info(f"Received update: {update}")
+
+                match update:
+                    case acp.schema.AgentMessageChunk() | acp.schema.AgentThoughtChunk() | acp.schema.ToolCallStart() | acp.schema.ToolCallProgress():
+                        message.delta = update
+                        message.chunks.append(update)
+                    case acp.schema.CurrentModeUpdate():
+                        message.model = update
+                    case acp.schema.UsageUpdate():
+                        message.usage = update
+                    case _:
+                        pass
+
+                yield message
+
+            response = await task  # unlikely raise error
+            message.stopReason = response.stop_reason
+            yield message
+
+            self.logger.info("End Prompt 2")
+
+        finally:
+            self._update_queue = None
+
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
 
     async def _handle_session_update(self, session_id: str, update: ACPUpdateChunk) -> None:
         queue = self._update_queue
