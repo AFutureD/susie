@@ -1,6 +1,6 @@
 import contextlib
 from abc import abstractmethod
-from typing import Protocol
+from typing import AsyncIterator, Protocol
 
 from .chat import ChatMessage
 
@@ -15,6 +15,7 @@ class Channel(Protocol):
     async def run_until_finish(self) -> AsyncIterator[Channel]:
         yield self
 
+    @abstractmethod
     async def send_message(self, message: ChatMessage):
         """Channel Outbound"""
         ...

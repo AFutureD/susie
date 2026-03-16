@@ -12,12 +12,19 @@ class Chat(Chatable):
         self.logger = logging.getLogger(__name__ + ":" + chat_id)
 
     async def receive_message(self, message: ChatMessage):
-        lifespan = message.lifespan or contextlib.nullcontext()
-
-        async with lifespan:
-            self.logger.debug("Received message: %s", message)
-            await self.replier.receive_message(self, message)
-            self.logger.debug("Replier received message: %s", message)
+        if message.out:
+            await self._handle_sent_message(message)
+        else:
+            await self._handle_new_message(message)
 
     async def send_message(self, message: ChatMessage):
         await self.channel.send_message(message)
+
+    async def _handle_sent_message(self, message: ChatMessage):
+        pass
+
+    async def _handle_new_message(self, message: ChatMessage):
+        lifespan = message.lifespan or contextlib.nullcontext()
+
+        async with lifespan:
+            await self.replier.receive_message(self, message)

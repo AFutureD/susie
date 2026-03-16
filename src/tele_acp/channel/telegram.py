@@ -21,7 +21,7 @@ def convert_telegram_message_to_chat_message(
     text_part: str | None = message.message
     parts: list[ChatMessagePart] = [ChatMessageTextPart(text_part)] if text_part else []
 
-    return ChatMessage(id=message_id, channel_id=channel_id, chat_id=chat_id, parts=parts, lifespan=lifespan)
+    return ChatMessage(id=message_id, channel_id=channel_id, chat_id=chat_id, out=message.out, mute=message.silent or False, parts=parts, lifespan=lifespan)
 
 
 class TelegramChannel(Channel):

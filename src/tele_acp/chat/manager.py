@@ -16,7 +16,8 @@ class ChatManager(Chatable):
         self._chats: dict[str, Chat] = {}
 
     async def send_message(self, message: ChatMessage):
-        pass
+        chat = await self.get_chat(message.channel_id, message.chat_id)
+        await chat.send_message(message)
 
     async def receive_message(self, message: ChatMessage):
         chat = await self.get_chat(message.channel_id, message.chat_id)
