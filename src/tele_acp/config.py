@@ -47,7 +47,7 @@ def load_config(config_file: Path | None = None) -> Config:
     return config
 
 
-def update_or_save_channel_config(channel_id: str, channel: TypeTelegramChannel, config_file: Path | None = None, as_default: bool = False):
+def update_or_save_channel_config(channel_id: str, channel: TypeTelegramChannel, config_file: Path | None = None):
     config_file = config_file or get_config_default_path()
 
     if not config_file.exists():
@@ -65,8 +65,6 @@ def update_or_save_channel_config(channel_id: str, channel: TypeTelegramChannel,
     channels[channel_id] = channel_item
 
     data["channels"] = channels
-    if as_default:
-        data["default_channel"] = channel_id
 
     with open(config_file, "w", encoding="utf-8") as f:
         tomlkit.dump(data, f)
@@ -86,18 +84,13 @@ def delete_channel_config(session_name: str, config_file: Path | None = None):
     if not isinstance(channels, Table):  # create channels entry if not exists
         raise ConfigError("Invalid channels entry.")
 
-    del_channel_id: str | None = None
     for key, item in channels.items():
         if item.get("session_name") != session_name:
             continue
         channels.pop(key)
-        del_channel_id = key
         break
 
     data["channels"] = channels
-
-    if del_channel_id and del_channel_id == data["default_channel"]:
-        data.pop("default_channel")
 
     with open(config_file, "w", encoding="utf-8") as f:
         tomlkit.dump(data, f)

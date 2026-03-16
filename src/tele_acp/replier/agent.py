@@ -9,7 +9,7 @@ def convert_acp_message_to_chat_message(channel_id: str, chat_id: str, message: 
     text = message.markdown()
     parts: list[ChatMessagePart] = [ChatMessageTextPart(text)] if text else []
 
-    return ChatMessage(id=None, channel_id=channel_id, chat_id=chat_id, parts=parts)
+    return ChatMessage(id=None, channel_id=channel_id, chat_id=chat_id, out=False, mute=False, parts=parts)
 
 
 class AgentThread:

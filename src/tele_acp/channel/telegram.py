@@ -74,6 +74,6 @@ class TelegramChannel(Channel):
     async def build_message_lifespan(self, peer: telethon.types.TypePeer, message_id: int) -> AsyncIterator[None]:
         async with self._tele_client.with_action(peer, "typing"):
             # Read the message
-            await self._tele_client.send_read_acknowledge(peer, message_id)
+            await self._tele_client.send_read_acknowledge(peer, max_id=message_id)
 
             yield

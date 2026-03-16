@@ -30,6 +30,8 @@ class ChannelHub:
 
     @contextlib.asynccontextmanager
     async def run(self) -> AsyncIterator[ChannelHub]:
+        assert len(self._channels) != 0, "No channels configured"
+
         async with contextlib.AsyncExitStack() as stack:
             async with self._channels_lock:
                 for channel in self._channels.values():

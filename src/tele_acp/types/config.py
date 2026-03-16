@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field, model_validator
 
 from .agent import DEFAULT_AGENT_ID, AgentConfig
 
-DEFAULT_CHANNEL_ID = "default"
 DEFAULT_TELEGRAM_API_ID = 611335
 DEFAULT_TELEGRAM_API_HASH = "d524b414d21f4d37f08684c1df41ac9c"
 
@@ -41,8 +40,8 @@ TypeTelegramChannel: TypeAlias = TelegramUserChannel | TelegramBotChannel
 
 
 class DialogBind(BaseModel):
+    channel: str = Field(description="The id of the `Channel`")
     agent: str = Field(default=DEFAULT_AGENT_ID, description="The id of the `Agent`")
-    channel: str = Field(default=DEFAULT_CHANNEL_ID, description="The id of the `Channel`")
     reporter: str | int | None = Field(default=None, description="Peer used for report messages of this binding")
 
 
@@ -51,7 +50,6 @@ class Config(BaseModel):
     api_hash: str | None = Field(default=None, description="Telegram api_hash")
     dialog_idle_timeout_minutes: int = Field(default=30, ge=1, description="Idle timeout for per-dialog context")
 
-    default_channel: str | None = Field(default=None, description="The id of the default `Channel`")
     channels: dict[str, TypeTelegramChannel] = {}
     agents: list[AgentConfig] = [AgentConfig(id=DEFAULT_AGENT_ID)]
     bindings: list[DialogBind] = []
@@ -59,11 +57,11 @@ class Config(BaseModel):
     @model_validator(mode="after")
     def check_bindings(self) -> Self:
         # Valiate Channels
-        if default_channel := self.default_channel:
-            assert len(self.channels) != 0, "default_channel must be provided when channels is not empty"
-            assert default_channel in self.channels, "default_channel must be present in channels"
-        else:
-            assert len(self.channels) == 0, "default_channel can only be None when channels is empty"
+        # if default_channel := self.default_channel:
+        #     assert len(self.channels) != 0, "default_channel must be provided when channels is not empty"
+        #     assert default_channel in self.channels, "default_channel must be present in channels"
+        # else:
+        #     assert len(self.channels) == 0, "default_channel can only be None when channels is empty"
 
         # Valiate Agents
         agent_ids = map(lambda x: x.id, self.agents)

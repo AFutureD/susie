@@ -102,7 +102,7 @@ def auth_login(
         else:
             channel = TelegramUserChannel(session_name=session_name)
 
-        update_or_save_channel_config(id, channel=channel, config_file=cli_args.config_file, as_default=switch_as_current)
+        update_or_save_channel_config(id, channel=channel, config_file=cli_args.config_file)
 
         print(f"Hi {utils.fmt.format_me(me)}")
         return True

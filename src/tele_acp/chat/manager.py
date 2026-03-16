@@ -2,7 +2,7 @@ from tele_acp.channel.hub import ChannelHub
 from tele_acp.replier.hub import ChatReplierHub
 from tele_acp.types import Chatable, ChatMessage, Config
 from tele_acp.types.agent import DEFAULT_AGENT_ID
-from tele_acp.types.config import DEFAULT_CHANNEL_ID, DialogBind
+from tele_acp.types.config import DialogBind
 
 from .chat import Chat
 
@@ -41,9 +41,9 @@ class ChatManager(Chatable):
         return chat
 
     async def get_binding(self, channel_id: str, chat_id: str) -> DialogBind:
-        _ = channel_id, chat_id
+        _ = chat_id
         return DialogBind(
             agent=DEFAULT_AGENT_ID,
-            channel=DEFAULT_CHANNEL_ID,
+            channel=channel_id,
             reporter=None,
         )
