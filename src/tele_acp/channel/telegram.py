@@ -29,12 +29,12 @@ class TelegramChannel(Channel):
     屏蔽 telethon 对 APP 的细节
     """
 
-    def __init__(self, settings: TypeTelegramChannel, message_handler: Callable[[ChatMessage], Awaitable[None]]):
+    def __init__(self, id: str, settings: TypeTelegramChannel, message_handler: Callable[[ChatMessage], Awaitable[None]]):
         tele_client = TGClient.create_as_login(None, None, settings)
         tele_client.add_event_handler(self._on_reveive_new_message_event, telethon.events.NewMessage())
         self._tele_client = tele_client
         self._message_handler = message_handler
-        self._id = settings.id
+        self._id = id
         self.logger = logging.getLogger(f"{self.__class__.__name__}:{self.id}")
 
     @property

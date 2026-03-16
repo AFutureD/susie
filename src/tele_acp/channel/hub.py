@@ -18,8 +18,8 @@ class ChannelHub:
         self._channels_lock = asyncio.Lock()
         self._channels: dict[str, Channel] = {}
 
-        for channel_settings in self._config.channels:
-            channel = TelegramChannel(channel_settings, self._on_receive_new_message)
+        for channel_id, channel_settings in self._config.channels.items():
+            channel = TelegramChannel(channel_id, channel_settings, self._on_receive_new_message)
             self._channels[channel.id] = channel
 
     def set_router(self, router: Router) -> None:

@@ -98,11 +98,11 @@ def auth_login(
         id = channel_id or me.username or str(me.id)
 
         if me.bot and bot_token:
-            channel = TelegramBotChannel(id=id, session_name=session_name, token=bot_token)
+            channel = TelegramBotChannel(session_name=session_name, token=bot_token)
         else:
-            channel = TelegramUserChannel(id=id, session_name=session_name)
+            channel = TelegramUserChannel(session_name=session_name)
 
-        update_or_save_channel_config(channel=channel, config_file=cli_args.config_file)
+        update_or_save_channel_config(id, channel=channel, config_file=cli_args.config_file, as_default=switch_as_current)
 
         print(f"Hi {utils.fmt.format_me(me)}")
         return True

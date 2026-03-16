@@ -5,7 +5,7 @@ from pathlib import Path
 import tomlkit
 from pydantic import ValidationError
 from tomlkit.exceptions import TOMLKitError
-from tomlkit.items import AoT
+from tomlkit.items import Table
 
 from .shared import get_app_user_defualt_dir
 from .types import Config, ConfigError, TypeTelegramChannel
@@ -47,7 +47,7 @@ def load_config(config_file: Path | None = None) -> Config:
     return config
 
 
-def update_or_save_channel_config(channel: TypeTelegramChannel, config_file: Path | None = None):
+def update_or_save_channel_config(channel_id: str, channel: TypeTelegramChannel, config_file: Path | None = None, as_default: bool = False):
     config_file = config_file or get_config_default_path()
 
     if not config_file.exists():
@@ -58,22 +58,15 @@ def update_or_save_channel_config(channel: TypeTelegramChannel, config_file: Pat
 
     channels = data.get("channels")
 
-    if not isinstance(channels, AoT):  # create channels entry if not exists
-        if (channels is None) or (isinstance(channels, list) and len(channels) == 0):
-            channels = tomlkit.aot()
-        else:
-            raise ConfigError("Invalid channels entry.")
-
-    for index, item in enumerate(list(channels)):
-        if item.get("id") != channel.id:
-            continue
-        del channels[index]
-        break
+    if not isinstance(channels, Table):  # create channels entry if not exists
+        raise ConfigError("Invalid channels entry.")
 
     channel_item = tomlkit.item(channel.model_dump(mode="json", exclude_none=True))
-    channels.append(channel_item)
+    channels[channel_id] = channel_item
 
     data["channels"] = channels
+    if as_default:
+        data["default_channel"] = channel_id
 
     with open(config_file, "w", encoding="utf-8") as f:
         tomlkit.dump(data, f)
@@ -90,16 +83,21 @@ def delete_channel_config(session_name: str, config_file: Path | None = None):
 
     channels = data.get("channels")
 
-    if channels is None:
-        channels = tomlkit.aot()
+    if not isinstance(channels, Table):  # create channels entry if not exists
+        raise ConfigError("Invalid channels entry.")
 
-    for index, item in enumerate(list(channels)):
+    del_channel_id: str | None = None
+    for key, item in channels.items():
         if item.get("session_name") != session_name:
             continue
-        del channels[index]
+        channels.pop(key)
+        del_channel_id = key
         break
 
     data["channels"] = channels
+
+    if del_channel_id and del_channel_id == data["default_channel"]:
+        data.pop("default_channel")
 
     with open(config_file, "w", encoding="utf-8") as f:
         tomlkit.dump(data, f)

@@ -1,7 +1,7 @@
 import enum
 from typing import Self, TypeAlias
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .agent import DEFAULT_AGENT_ID, AgentConfig
 
@@ -16,7 +16,6 @@ class ChannelType(str, enum.Enum):
 
 
 class ChannelSettings(BaseModel):
-    id: str
     type: ChannelType
 
 
@@ -52,19 +51,19 @@ class Config(BaseModel):
     api_hash: str | None = Field(default=None, description="Telegram api_hash")
     dialog_idle_timeout_minutes: int = Field(default=30, ge=1, description="Idle timeout for per-dialog context")
 
-    channels: list[TelegramUserChannel | TelegramBotChannel] = []
+    default_channel: str | None = Field(default=None, description="The id of the default `Channel`")
+    channels: dict[str, TypeTelegramChannel] = {}
     agents: list[AgentConfig] = [AgentConfig(id=DEFAULT_AGENT_ID)]
     bindings: list[DialogBind] = []
 
-    # @model_validator(mode="after")
+    @model_validator(mode="after")
     def check_bindings(self) -> Self:
         # Valiate Channels
-        channel_ids = map(lambda x: x.id, self.channels)
-        channel_id_set = set(channel_ids)
-        assert len(self.channels) >= 1, "At least one channel is required"
-        assert DEFAULT_CHANNEL_ID in channel_id_set, "Default channel must be present"
-        assert len(self.channels) == len(channel_id_set), "Channel ids must be unique"
-        assert len(self.channels) <= 1 or all(channel.session_name is not None for channel in self.channels), "session_name must be provided for all channels"
+        if default_channel := self.default_channel:
+            assert len(self.channels) != 0, "default_channel must be provided when channels is not empty"
+            assert default_channel in self.channels, "default_channel must be present in channels"
+        else:
+            assert len(self.channels) == 0, "default_channel can only be None when channels is empty"
 
         # Valiate Agents
         agent_ids = map(lambda x: x.id, self.agents)

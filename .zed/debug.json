@@ -29,11 +29,11 @@
     "args": ["auth", "login", "--bot", "8777499436:AAGjg_RGoQwHS1p1NxShjutFEa4h9QVxxZU"],
   },
   {
-    "label": "tele-acp Logout Bot",
+    "label": "tele-acp Logout",
     "adapter": "Debugpy",
     "request": "launch",
     "module": "tele_acp.cli",
     "cwd": "$ZED_WORKTREE_ROOT",
-    "args": ["--session", "1ada7caf-57e8-4482-9cf0-9c37c58687bb", "auth", "logout"],
+    "args": ["--session", "6c7b563c-68c8-42b8-b723-a1150caf0797", "auth", "logout"],
   },
 ]
