@@ -21,19 +21,19 @@ class AgentThread:
     async def stop_and_send_message(self, channel_id, chat_id, content: str) -> AsyncIterator[AcpMessage]:
 
         prompt = (
+            # IMPORTANT. We may move to system instructions but the acp do not support this.
+            f"<IMPORTANT>\n"
+            f"always using `telegram_mcp_server` tools when you need to operate on Telegram.\n"
+            f"always pass `channel_id={channel_id}` to every `Telegram MCP` tool call.\n"
+            f"If you want to reply to the message, always call `send_message`, and you may call it multiple times.\n"
+            f"</IMPORTANT>\n"
+            f"\n"
             # Context Info
             f"<CONTEXT>\n"
             f"This is a message from Telegram.\n"
             f"Channel ID: {channel_id}\n"
             f"Chat ID: {chat_id}\n"
             f"</CONTEXT>\n"
-            f"\n"
-            # IMPORTANT
-            f"<IMPORTANT>\n"
-            f"always using `telegram_mcp_server` tools when you need to operate on Telegram.\n"
-            f"always pass `channel_id={channel_id}` to every `Telegram MCP` tool call.\n"
-            f"If you want to reply to the message, always call `send_message`, and you may call it multiple times.\n"
-            f"</IMPORTANT>\n"
             f"\n"
             # User Input
             f"User Content:\n"
