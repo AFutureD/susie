@@ -47,7 +47,7 @@ async def send_message(
     channel_id: str,
     chat_id: str,
     content: str,
-    file: list[str] | None = None,
+    file: str | list[str] | None = None,
 ) -> str | None:
     """Send a message to a Chat By channel_id and chat_id.
 
