@@ -4,7 +4,7 @@ from .chat import Chatable, ChatMessage, ChatMessageFilePart, ChatMessagePart, C
 from .config import DEFAULT_TELEGRAM_API_HASH, DEFAULT_TELEGRAM_API_ID, ChatSettings, Config, TelegramBotChannel, TelegramUserChannel, TypeTelegramChannel
 from .error import ConfigError, CurrentSessionPathNotValidError, unreachable
 from .session import SessionInfo
-from .tl import chat_id_into_peer_id, peer_id_into_chat_id
+from .tl import chat_id_into_peer_id, peer_id_into_chat_id, peer_id_into_raw_int
 
 __all__ = [
     "Config",
@@ -29,4 +29,5 @@ __all__ = [
     "DEFAULT_TELEGRAM_API_HASH",
     "ChannelPeer",
     "ChatSettings",
+    "peer_id_into_raw_int",
 ]

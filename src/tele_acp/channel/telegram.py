@@ -12,9 +12,11 @@ from tele_acp.types import (
     ChatMessageFilePart,
     ChatMessagePart,
     ChatMessageTextPart,
+    TelegramUserChannel,
     TypeTelegramChannel,
     chat_id_into_peer_id,
     peer_id_into_chat_id,
+    peer_id_into_raw_int,
 )
 
 from .client import TGClient
@@ -44,6 +46,7 @@ class TelegramChannel(Channel):
     def __init__(self, id: str, settings: TypeTelegramChannel, message_handler: Callable[[ChatMessage], Awaitable[None]]):
         tele_client = TGClient.create_as_login(None, None, settings)
         tele_client.add_event_handler(self._on_receive_new_message_event, telethon.events.NewMessage())
+        self.settings = settings
         self._tele_client = tele_client
         self._message_handler = message_handler
         self._id = id
@@ -83,17 +86,39 @@ class TelegramChannel(Channel):
         message: TeleMessage = event.message
 
         peer_id = message.peer_id
-        chat_id: str = peer_id_into_chat_id(peer_id)
-        if not isinstance(peer_id, telethon.types.PeerUser):
+        if not isinstance(peer_id, telethon.types.PeerUser):  # hard-coded peer filter used during development
             return
 
+        if not await self.is_peer_allowed(peer_id):
+            return
+
+        chat_id: str = peer_id_into_chat_id(peer_id)
         chat_message = convert_telegram_message_to_chat_message(self.id, chat_id, message, lifespan=self.build_message_lifespan(peer_id, message.id))
         await self.receive_message(chat_message)
 
     @contextlib.asynccontextmanager
     async def build_message_lifespan(self, peer: telethon.types.TypePeer, message_id: int) -> AsyncIterator[None]:
         async with self._tele_client.with_action(peer, "typing"):
-            # Read the message
+            # mark the massage `read`
             await self._tele_client.send_read_acknowledge(peer, max_id=message_id)
 
             yield
+
+    async def is_peer_allowed(self, peer: telethon.types.TypePeer) -> bool:
+        """If Peer is allowed by the whitelist or contact list"""
+
+        if whitelist := self.settings.whitelist:
+            chat_id = peer_id_into_chat_id(peer)
+            raw_id = peer_id_into_raw_int(peer)
+
+            return any(item in {chat_id, str(raw_id)} for item in whitelist)
+
+        match settings := self.settings:
+            case TelegramUserChannel() if isinstance(peer, telethon.types.PeerUser):
+                if settings.allow_contacts:
+                    contacts = await self._tele_client.get_contact_user_peer()
+                    if any(contact.user_id == peer.user_id for contact in contacts):
+                        return True
+            case _:
+                pass
+        return False

@@ -1,6 +1,16 @@
 from telethon import types
 
 
+def peer_id_into_raw_int(peer_id: types.TypePeer) -> int:
+    match peer_id:
+        case types.PeerUser():
+            return peer_id.user_id
+        case types.PeerChat():
+            return peer_id.chat_id
+        case types.PeerChannel():
+            return peer_id.channel_id
+
+
 def peer_id_into_chat_id(peer_id: types.TypePeer) -> str:
     match peer_id:
         case types.PeerUser():
