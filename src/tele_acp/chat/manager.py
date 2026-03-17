@@ -50,5 +50,4 @@ class ChatManager(Chatable):
         return ChatSettings(
             agent=DEFAULT_AGENT_ID,
             channel=channel_id,
-            forward_to=None,
         )

@@ -29,6 +29,7 @@ class APP:
         router = Router(chat_manager)
 
         channel_hub.set_router(router)
+        mcp_server.set_chat_manager(chat_manager)
 
         self._config = config
         self._chat_manager = chat_manager

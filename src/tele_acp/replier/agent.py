@@ -58,5 +58,6 @@ class ChatReplier(AgentThread, ChatMessageReplyable):
         async for delta in stream:
             if (stop_reason := delta.stop_reason) and stop_reason != "cancelled":
                 msg = convert_acp_message_to_chat_message(message.channel_id, message.chat_id, delta)
+                msg.receiver = self.settings.forward_to
                 await chat.send_message(msg)
         self.logger.info("Message sent for peer: %s", message.channel_id)
