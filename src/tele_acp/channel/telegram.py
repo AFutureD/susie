@@ -85,11 +85,11 @@ class TelegramChannel(Channel):
 
         message: TeleMessage = event.message
 
-        peer_id = message.peer_id
-        if not isinstance(peer_id, telethon.types.PeerUser):  # hard-coded peer filter used during development
+        if not await self.is_message_allowed(message):
             return
 
-        if not await self.is_peer_allowed(peer_id):
+        peer_id = message.peer_id
+        if not isinstance(peer_id, telethon.types.PeerUser):  # hard-coded peer filter used during development
             return
 
         chat_id: str = peer_id_into_chat_id(peer_id)
@@ -104,21 +104,51 @@ class TelegramChannel(Channel):
 
             yield
 
-    async def is_peer_allowed(self, peer: telethon.types.TypePeer) -> bool:
+    async def is_message_allowed(self, message: TeleMessage) -> bool:
         """If Peer is allowed by the whitelist or contact list"""
 
-        if whitelist := self.settings.whitelist:
-            chat_id = peer_id_into_chat_id(peer)
-            raw_id = peer_id_into_raw_int(peer)
+        peer: telethon.types.TypePeer = message.peer_id
+        sender: telethon.types.TypePeer | None = message.from_id  # None if it is an anonymous messages
 
-            return any(item in {chat_id, str(raw_id)} for item in whitelist)
+        peer_raw_id = peer_id_into_raw_int(peer)
+        chat_id = peer_id_into_chat_id(peer)
 
-        match settings := self.settings:
-            case TelegramUserChannel() if isinstance(peer, telethon.types.PeerUser):
-                if settings.allow_contacts:
-                    contacts = await self._tele_client.get_contact_user_peer()
-                    if any(contact.user_id == peer.user_id for contact in contacts):
-                        return True
-            case _:
-                pass
-        return False
+        sender_raw_id = peer_id_into_raw_int(sender) if sender else None
+        sender_chat_id = peer_id_into_chat_id(sender) if sender else None
+
+        def _is_allowed_by_white_list(settings: TypeTelegramChannel) -> bool:
+            whitelist = settings.whitelist
+            if whitelist is None:
+                return False
+
+            # check if chat_id in white list
+            ret = any(item in {chat_id, str(peer_raw_id)} for item in whitelist)
+
+            if isinstance(peer, telethon.types.PeerUser):
+                return ret
+
+            if sender_raw_id is None or sender_chat_id is None:
+                return False  # Do Not Respond to anonymous messages
+
+            ret &= any(item in {sender_raw_id, str(sender_chat_id)} for item in whitelist)
+            return ret
+
+        async def _is_allowed_by_contact(settings: TypeTelegramChannel) -> bool:
+            if not isinstance(settings, TelegramUserChannel):
+                return False
+
+            if not settings.allow_contacts:
+                return False
+
+            if not isinstance(peer, telethon.types.PeerUser):
+                return False
+
+            contacts = await self._tele_client.get_contact_user_peer()
+            match = any(contact.user_id == peer.user_id for contact in contacts)
+
+            return match
+
+        match_white_list: bool = _is_allowed_by_white_list(self.settings)
+        match_contact_list = await _is_allowed_by_contact(self.settings)
+
+        return match_white_list or match_contact_list
