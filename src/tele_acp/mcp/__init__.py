@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Tuple, cast
 
 from mcp.server.fastmcp import Context, FastMCP
-from tele_acp_core import ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageTextPart
+from tele_acp_core import ChatInfo, ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageTextPart
 
 from tele_acp.chat import Chat, ChatManager
 
@@ -18,14 +18,16 @@ class MCP(FastMCP):
     def mcp_url(self) -> str:
         return f"http://{self.settings.host}:{self.settings.port}{self.settings.streamable_http_path}"
 
+    @property
+    def chat_manager(self) -> ChatManager:
+        assert self._chat_manager is not None, "Chat manager not initialized"
+        return self._chat_manager
+
     def set_chat_manager(self, chat_manager: ChatManager) -> None:
         self._chat_manager = chat_manager
 
     async def get_chat(self, channel_id: str, chat_id: str) -> Chat:
-        if self._chat_manager is None:
-            raise RuntimeError("Chat manager is not set")
-
-        chat = await self._chat_manager.get_chat(channel_id, chat_id)
+        chat = await self.chat_manager.get_chat(channel_id, chat_id)
         return chat
 
 
@@ -102,7 +104,7 @@ async def list_messages(
 
     Args:
         channel_id:
-            The Telegram channel id configured in tele-acp.
+            The channel id.
         chat_id:
         The chat id to list messages from.
         num:
@@ -172,3 +174,24 @@ def _date_range(
         date_to = date_span[1]
 
     return date_from, date_to
+
+
+@mcp_server.tool()
+async def list_chats(
+    ctx: Context,
+    channel_id: str,
+    with_archived: bool = False,
+) -> list[ChatInfo]:
+    """
+    List Chat Infos
+
+    Args:
+        channel_id: The channel id.
+        with_archived: if chats include archived chats. defaults to False.
+
+    Returns:
+        A list of Chat Infos.
+    """
+
+    chats = await cast(MCP, ctx.fastmcp).chat_manager.list_chat_infos(channel_id=channel_id, with_archived=with_archived)
+    return chats

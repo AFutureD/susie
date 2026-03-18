@@ -4,15 +4,9 @@ from datetime import datetime
 from typing import AsyncIterator, Awaitable, Callable
 
 import telethon
-from tele_acp_core import (
-    Channel,
-    ChatMessage,
-    ChatMessageFilePart,
-    ChatMessagePart,
-    ChatMessageTextPart,
-    unreachable,
-)
+from tele_acp_core import Channel, ChatInfo, ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageTextPart, unreachable
 from telethon.tl.custom import Message as TeleMessage
+from telethon.tl.custom.dialog import Dialog as TeleDialog
 
 from .client import TGClient
 from .settings import TelegramUserChannel, TypeTelegramChannel
@@ -192,6 +186,22 @@ class TelegramChannel(Channel):
         match_contact_list = await _is_allowed_by_contact(self.settings)
 
         return match_white_list or match_contact_list
+
+    async def list_chats(self, with_archived: bool = False) -> list[ChatInfo]:
+        archived = None if with_archived else False
+
+        dialogs = await self._tele_client.get_cached_dialogs(archived=archived)
+
+        ret: list[ChatInfo] = []
+
+        for dialog in dialogs:
+            dialog: TeleDialog = dialog
+            peer = dialog.dialog.peer
+
+            info = ChatInfo(channel_id=self.id, chat_id=peer_id_into_chat_id(peer), name=dialog.name)
+            ret.append(info)
+
+        return ret
 
     async def list_messages(self, chat_id: str, num: int = 1, date_start: datetime | None = None, date_end: datetime | None = None) -> list[ChatMessage]:
         peer_id = chat_id_into_peer_id(chat_id)

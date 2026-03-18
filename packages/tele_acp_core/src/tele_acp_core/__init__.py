@@ -1,6 +1,6 @@
 from .agent import DEFAULT_AGENT_ID, AgentConfig
 from .channel import Channel, ChannelPeer, ChannelSettings, ChannelType
-from .chat import Chatable, ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageQueryable, ChatMessageReplyable, ChatMessageTextPart
+from .chat import Chatable, ChatInfo, ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageQueryable, ChatMessageReplyable, ChatMessageTextPart
 from .error import ConfigError, CurrentSessionPathNotValidError, unreachable
 from .session import SessionInfo
 
@@ -22,4 +22,5 @@ __all__ = [
     "ChannelType",
     "ChannelSettings",
     "ChatMessageQueryable",
+    "ChatInfo",
 ]

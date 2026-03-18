@@ -1,4 +1,4 @@
-from tele_acp_core import DEFAULT_AGENT_ID, Chatable, ChatMessage
+from tele_acp_core import DEFAULT_AGENT_ID, Chatable, ChatMessage, ChatInfo
 
 from tele_acp.channel.hub import ChannelHub
 from tele_acp.config import ChatSettings, Config
@@ -22,6 +22,13 @@ class ChatManager(Chatable):
     async def receive_message(self, message: ChatMessage):
         chat = await self.get_chat(message.channel_id, message.chat_id)
         await chat.receive_message(message)
+
+    async def list_chat_infos(self, channel_id: str, with_archived: bool = False) -> list[ChatInfo]:
+        channel = self._channel_hub.get_channel(channel_id)
+        assert channel is not None, "channel not found"
+
+        return await channel.list_chats(with_archived)
+
 
     async def get_chat(self, channel_id: str, chat_id: str) -> Chat:
         if chat := self._chats.get(chat_id):

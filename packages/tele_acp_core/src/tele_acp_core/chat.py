@@ -45,6 +45,13 @@ class ChatMessage:
         return ChatMessage(meta={}, id=None, channel_id="", chat_id="", receiver="", out=False, mute=False)
 
 
+@dataclass
+class ChatInfo:
+    channel_id: str = Field(description="The channel ID")
+    chat_id: str = Field(description="The chat ID")
+    name: str | None = Field(default=None, description="The chat name")
+
+
 class Chatable(Protocol):
     async def receive_message(self, message: ChatMessage):
         """Handle messages sent either by a remote peer or by the same user from another session on this channel."""

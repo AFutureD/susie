@@ -5,7 +5,7 @@ from typing import Any, AsyncIterator, Protocol, TypeAlias
 
 from pydantic import BaseModel
 
-from .chat import ChatMessage
+from .chat import ChatInfo, ChatMessage
 
 ChannelPeer: TypeAlias = Any
 
@@ -40,6 +40,9 @@ class Channel(Protocol):
     async def status(self) -> bool:
         """Channel Status"""
         ...
+
+    @abstractmethod
+    async def list_chats(self, with_archived: bool = False) -> list[ChatInfo]: ...
 
     @abstractmethod
     async def list_messages(self, chat_id: str, num: int = 1, date_start: datetime | None = None, date_end: datetime | None = None) -> list[ChatMessage]: ...

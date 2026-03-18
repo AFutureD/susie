@@ -11,7 +11,7 @@ import telethon
 from tele_acp_core import SessionInfo
 from telethon import functions, hints
 from telethon.errors import RPCError
-from telethon.tl.custom import Message
+from telethon.tl.custom import Dialog, Message
 from telethon.tl.functions.account import GetAuthorizationsRequest
 from telethon.tl.types.contacts import Contacts
 from telethon.types import PeerUser
@@ -45,6 +45,9 @@ class TGClient(telethon.TelegramClient):
 
         self.contacts_users_peer_last_update_date = 0
         self.contacts_users_peer: list[PeerUser] = []
+
+        self.dialogs_last_update_date = 0
+        self.dialogs: dict[int, Dialog] = {}
 
     async def _start_without_login(self) -> "TGClient":
         if not self.is_connected():
@@ -309,3 +312,15 @@ class TGClient(telethon.TelegramClient):
 
         async with cast(AbstractAsyncContextManager[object], action_handle):
             yield
+
+    async def get_cached_dialogs(self, *args, **kwargs) -> list[Dialog]:
+        now = asyncio.get_event_loop().time()
+        if now - self.dialogs_last_update_date < 60 * 10:
+            return list(self.dialogs.values())
+
+        dialogs = await self.get_dialogs(*args, **kwargs)
+        for dialog in dialogs:
+            self.dialogs[dialog.id] = dialog
+        self.dialogs_last_update_date = now
+
+        return list(self.dialogs.values())
