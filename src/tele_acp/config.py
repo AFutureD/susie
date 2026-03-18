@@ -1,18 +1,79 @@
 from __future__ import annotations
 
+import enum
 from pathlib import Path
+from typing import Self, TypeAlias
 
 import tomlkit
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError, model_validator
+from pydantic.fields import Field
+from tele_acp_core import DEFAULT_AGENT_ID, AgentConfig, ConfigError
 from tomlkit.exceptions import TOMLKitError
 from tomlkit.items import Table
 
-from .shared import get_app_user_defualt_dir
-from .types import Config, ConfigError, TypeTelegramChannel
+from .shared import get_app_user_default_dir
+
+DEFAULT_TELEGRAM_API_ID = 611335
+DEFAULT_TELEGRAM_API_HASH = "d524b414d21f4d37f08684c1df41ac9c"
+
+
+class ChannelType(str, enum.Enum):
+    TELEGRAM_USER = "telegram_user"
+    TELEGRAM_BOT = "telegram_bot"
+
+
+class ChannelSettings(BaseModel):
+    type: ChannelType
+
+
+class TelegramChannel(ChannelSettings):
+    session_name: str = Field(description="The session name for the Telegram client")
+
+    whitelist: list[str] | None = Field(default=[], description="The list of allowed users. peer id or group id")
+
+
+class TelegramUserChannel(TelegramChannel):
+    type: ChannelType = ChannelType.TELEGRAM_USER
+
+    allow_contacts: bool = Field(default=True, description="Whether to allow contacts")
+
+
+class TelegramBotChannel(TelegramChannel):
+    type: ChannelType = ChannelType.TELEGRAM_BOT
+
+    token: str = Field(description="Telegram bot token")
+
+
+TypeTelegramChannel: TypeAlias = TelegramUserChannel | TelegramBotChannel
+
+
+class ChatSettings(BaseModel):
+    channel: str = Field(description="The id of the `Channel`")
+    agent: str = Field(default=DEFAULT_AGENT_ID, description="The id of the `Agent`")
+
+
+class Config(BaseModel):
+    api_id: int | None = Field(default=None, description="Telegram api_id")
+    api_hash: str | None = Field(default=None, description="Telegram api_hash")
+    dialog_idle_timeout_minutes: int = Field(default=30, ge=1, description="Idle timeout for per-dialog context")
+
+    channels: dict[str, TypeTelegramChannel] = {}
+    agents: list[AgentConfig] = [AgentConfig(id=DEFAULT_AGENT_ID)]
+    bindings: list[ChatSettings] = []
+
+    @model_validator(mode="after")
+    def check_bindings(self) -> Self:
+        agent_ids = map(lambda x: x.id, self.agents)
+        agent_id_set = set(agent_ids)
+        assert len(self.agents) >= 1, "At least one agent is required"
+        assert DEFAULT_AGENT_ID in agent_id_set, "Default agent must be present"
+        assert len(self.agents) == len(agent_id_set), "Agent ids must be unique"
+
+        return self
 
 
 def get_config_default_path() -> Path:
-    return get_app_user_defualt_dir() / "config.toml"
+    return get_app_user_default_dir() / "config.toml"
 
 
 def get_config_default() -> Config:

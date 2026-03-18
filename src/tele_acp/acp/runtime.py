@@ -5,17 +5,18 @@ from pathlib import Path
 from typing import AsyncIterator
 
 import acp
+from tele_acp_core import AgentConfig
 
-from tele_acp.types import AgentConfig, Config
+from tele_acp.config import Config
+from tele_acp.shared import get_app_user_default_dir
 
-from ..shared import get_app_user_defualt_dir
 from .client import ACPAgentConfig, ACPUpdateChunk
 from .connection import ACPAgentConnection
 from .message import AcpContentBlock, AcpMessage
 
 
 def _get_agent_work_folder():
-    ret = get_app_user_defualt_dir() / "workspace"
+    ret = get_app_user_default_dir() / "workspace"
     ret.mkdir(parents=True, exist_ok=True)
     return ret
 

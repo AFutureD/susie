@@ -1,4 +1,4 @@
-from tele_acp.types import Chatable, ChatMessage
+from tele_acp_core import Chatable, ChatMessage
 
 
 class Router:

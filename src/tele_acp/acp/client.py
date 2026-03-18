@@ -4,8 +4,7 @@ from typing import Any, Awaitable, Callable, TypeAlias
 import acp
 from acp import schema
 from pydantic.dataclasses import dataclass
-
-from tele_acp.types import unreachable
+from tele_acp_core import unreachable
 
 # curl https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json
 # https://github.com/agentclientprotocol/registry/blob/main/agent.schema.json

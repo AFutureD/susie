@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import cast
 
 from mcp.server.fastmcp import Context, FastMCP
+from tele_acp_core import ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageTextPart
 
 from tele_acp.chat import Chat, ChatManager
-from tele_acp.types import ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageTextPart
 
 
 class MCP(FastMCP):

@@ -1,8 +1,7 @@
 import arrow
 import telethon
+from tele_acp_core import SessionInfo
 from telethon.tl.tlobject import _json_default
-
-from tele_acp.types import SessionInfo
 
 from .output import get_str_len_for_int
 

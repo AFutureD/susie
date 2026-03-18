@@ -3,8 +3,10 @@ import contextlib
 import logging
 from typing import AsyncIterator
 
+from tele_acp_core import Channel, ChatMessage
+
+from tele_acp.config import Config
 from tele_acp.router import Router
-from tele_acp.types import Channel, ChatMessage, Config
 
 from .telegram import TelegramChannel
 

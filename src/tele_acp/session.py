@@ -1,11 +1,10 @@
 import uuid
 from pathlib import Path
 
+from tele_acp_core import CurrentSessionPathNotValidError
 from telethon.sessions import SQLiteSession
 
-from tele_acp.shared import get_app_user_defualt_dir
-
-from .types import CurrentSessionPathNotValidError
+from tele_acp.shared import get_app_user_default_dir
 
 ACTIVATED_SESSION_NAME = "Current"
 
@@ -15,7 +14,7 @@ class TGSession(SQLiteSession):
 
 
 def get_app_session_folder() -> Path:
-    ret = get_app_user_defualt_dir() / "sessions"
+    ret = get_app_user_default_dir() / "sessions"
     ret.mkdir(parents=True, exist_ok=True)
     return ret
 

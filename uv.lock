@@ -2,6 +2,12 @@ version = 1
 revision = 3
 requires-python = ">=3.14"
 
+[manifest]
+members = [
+    "tele-acp",
+    "tele-acp-core",
+]
+
 [[package]]
 name = "agent-client-protocol"
 version = "0.8.1"
@@ -759,6 +765,7 @@ dependencies = [
     { name = "mcp" },
     { name = "pydantic" },
     { name = "rich" },
+    { name = "tele-acp-core" },
     { name = "telethon" },
     { name = "tomlkit" },
     { name = "typer" },
@@ -782,6 +789,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.26.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "rich", specifier = ">=14.3.2" },
+    { name = "tele-acp-core", editable = "packages/tele_acp_core" },
     { name = "telethon", specifier = ">=1.42.0" },
     { name = "tomlkit", specifier = ">=0.14.0" },
     { name = "typer", specifier = ">=0.23.1" },
@@ -794,6 +802,17 @@ dev = [
     { name = "ruff", specifier = ">=0.14.14" },
     { name = "ty", specifier = ">=0.0.14" },
 ]
+
+[[package]]
+name = "tele-acp-core"
+version = "0.1.0"
+source = { editable = "packages/tele_acp_core" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.12.5" }]
 
 [[package]]
 name = "telethon"

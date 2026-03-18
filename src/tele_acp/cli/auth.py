@@ -7,9 +7,8 @@ from rich import print
 
 from tele_acp import utils
 from tele_acp.channel.client import TGClient
-from tele_acp.config import delete_channel_config, load_config, update_or_save_channel_config
+from tele_acp.config import TelegramBotChannel, TelegramUserChannel, delete_channel_config, load_config, update_or_save_channel_config
 from tele_acp.session import TGSession, session_switch
-from tele_acp.types import TelegramBotChannel, TelegramUserChannel
 
 from .shared import SharedArgs
 

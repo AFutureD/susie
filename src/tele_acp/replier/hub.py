@@ -1,5 +1,7 @@
+from tele_acp_core import AgentConfig, ChatMessageReplyable
+
 from tele_acp.acp.runtime import ACPRuntimeHub
-from tele_acp.types import AgentConfig, ChatMessageReplyable, Config
+from tele_acp.config import Config
 
 from .agent import ChatReplier
 

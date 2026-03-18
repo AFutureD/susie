@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def get_app_user_defualt_dir() -> Path:
+def get_app_user_default_dir() -> Path:
     """Get the application default directory path."""
     # TODO: respect XDG and other environment variable.
     share_dir = Path.home() / ".config" / "tele"

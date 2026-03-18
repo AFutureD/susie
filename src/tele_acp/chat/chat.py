@@ -2,7 +2,9 @@ import asyncio
 import contextlib
 import logging
 
-from tele_acp.types import Channel, Chatable, ChatMessage, ChatMessageReplyable, ChatSettings
+from tele_acp_core import Channel, Chatable, ChatMessage, ChatMessageReplyable
+
+from tele_acp.config import ChatSettings
 
 IGNORE_MESSAGE_DURATION_IN_SECONDS = 120.0
 

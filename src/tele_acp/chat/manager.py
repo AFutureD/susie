@@ -1,7 +1,8 @@
+from tele_acp_core import DEFAULT_AGENT_ID, Chatable, ChatMessage
+
 from tele_acp.channel.hub import ChannelHub
+from tele_acp.config import ChatSettings, Config
 from tele_acp.replier.hub import ChatReplierHub
-from tele_acp.types import Chatable, ChatMessage, ChatSettings, Config
-from tele_acp.types.agent import DEFAULT_AGENT_ID
 
 from .chat import Chat
 

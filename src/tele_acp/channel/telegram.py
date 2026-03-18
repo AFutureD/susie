@@ -3,23 +3,60 @@ import logging
 from typing import AsyncIterator, Awaitable, Callable
 
 import telethon
-from telethon import hints as TeleHints
-from telethon.tl.custom import Message as TeleMessage
-
-from tele_acp.types import (
+from tele_acp_core import (
     Channel,
     ChatMessage,
     ChatMessageFilePart,
     ChatMessagePart,
-    ChatMessageTextPart,
-    TelegramUserChannel,
-    TypeTelegramChannel,
-    chat_id_into_peer_id,
-    peer_id_into_chat_id,
-    peer_id_into_raw_int,
+    ChatMessageTextPart, unreachable,
 )
+from telethon.tl.custom import Message as TeleMessage
+
+from tele_acp.config import TelegramUserChannel, TypeTelegramChannel
 
 from .client import TGClient
+
+
+def peer_id_into_raw_int(peer_id: telethon.types.TypePeer) -> int:
+    match peer_id:
+        case telethon.types.PeerUser():
+            return peer_id.user_id
+        case telethon.types.PeerChat():
+            return peer_id.chat_id
+        case telethon.types.PeerChannel():
+            return peer_id.channel_id
+        case _:
+            unreachable("peer_id_into_raw_int")
+
+
+def peer_id_into_chat_id(peer_id: telethon.types.TypePeer) -> str:
+    match peer_id:
+        case telethon.types.PeerUser():
+            return f"U{peer_id.user_id}"
+        case telethon.types.PeerChat():
+            return f"G{peer_id.chat_id}"
+        case telethon.types.PeerChannel():
+            return f"C{peer_id.channel_id}"
+        case _:
+            unreachable("peer_id_into_chat_id")
+
+
+def chat_id_into_peer_id(chat_id: str) -> telethon.types.TypePeer | str:
+    if chat_id == "":
+        return chat_id
+
+    type_str = chat_id[0].upper()
+    id_str = chat_id.removeprefix(type_str)
+
+    match type_str:
+        case "U":
+            return telethon.types.PeerUser(int(id_str))
+        case "C":
+            return telethon.types.PeerChat(int(id_str))
+        case "G":
+            return telethon.types.PeerChannel(int(id_str))
+        case _:
+            return chat_id
 
 
 def convert_telegram_message_to_chat_message(
@@ -67,7 +104,7 @@ class TelegramChannel(Channel):
             yield self
 
     async def send_message(self, message: ChatMessage):
-        files: list[TeleHints.FileLike] = [part.path for part in message.parts if isinstance(part, ChatMessageFilePart)]
+        files: list[telethon.hints.FileLike] = [part.path for part in message.parts if isinstance(part, ChatMessageFilePart)]
         texts = [part.text for part in message.parts if isinstance(part, ChatMessageTextPart)]
         content = "\n".join(texts)
 
