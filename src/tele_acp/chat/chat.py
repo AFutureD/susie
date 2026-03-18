@@ -1,15 +1,16 @@
 import asyncio
 import contextlib
 import logging
+from datetime import datetime
 
-from tele_acp_core import Channel, Chatable, ChatMessage, ChatMessageReplyable
+from tele_acp_core import Channel, Chatable, ChatMessage, ChatMessageQueryable, ChatMessageReplyable
 
 from tele_acp.config import ChatSettings
 
 IGNORE_MESSAGE_DURATION_IN_SECONDS = 120.0
 
 
-class Chat(Chatable):
+class Chat(Chatable, ChatMessageQueryable):
     def __init__(self, chat_id: str, channel: Channel, settings: ChatSettings, replier: ChatMessageReplyable):
         self.id = chat_id
         self.replier = replier
@@ -31,6 +32,9 @@ class Chat(Chatable):
 
     async def send_message(self, message: ChatMessage):
         await self.channel.send_message(message)
+
+    async def list_messages(self, num: int = 1, date_start: datetime | None = None, date_end: datetime | None = None) -> list[ChatMessage]:
+        return []
 
     async def _handle_sent_message(self, message: ChatMessage):
         _ = message

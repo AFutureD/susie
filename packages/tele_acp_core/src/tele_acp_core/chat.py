@@ -1,4 +1,5 @@
 import contextlib
+from datetime import datetime
 from typing import Any, Protocol, TypeAlias
 
 from pydantic import ConfigDict, Field
@@ -50,6 +51,22 @@ class Chatable(Protocol):
 
     async def send_message(self, message: ChatMessage):
         """Send message to remote peer, or boardcast message to all sessions on this channel."""
+        ...
+
+
+class ChatMessageQueryable(Protocol):
+    async def list_messages(self, num: int = 1, date_start: datetime | None = None, date_end: datetime | None = None) -> list[ChatMessage]:
+        """
+        List recent messages in this chat.
+
+        Args:
+            num: The number of messages to list. default to 1, which means to list the latest message.
+            date_start: The start datetime to list messages. default to None, which means no limit on the start datetime.
+            date_end: The end datetime to list messages. default to None, which means no limit on the end datetime.
+
+        Returns:
+            A list of messages, ordered from old to new.
+        """
         ...
 
 
