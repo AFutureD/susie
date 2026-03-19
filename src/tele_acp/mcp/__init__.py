@@ -7,14 +7,12 @@ from mcp.server.fastmcp import Context, FastMCP
 from tele_acp_core import ChatInfo, ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageTextPart
 
 from tele_acp.chat import Chat, ChatManager
-
-NAME = "susie_mcp_server"
-PORT = 9898
+from tele_acp.constant import SUSIE_MCP_NAME, SUSIE_MCP_PORT
 
 
 class MCP(FastMCP):
     def __init__(self):
-        super().__init__(name=NAME, json_response=True, port=PORT)
+        super().__init__(name=SUSIE_MCP_NAME, json_response=True, port=SUSIE_MCP_PORT)
         self._chat_manager: ChatManager | None = None
 
     @property

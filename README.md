@@ -59,3 +59,10 @@ Susie's configuration file is located at `~/.config/susie/config.toml`.
 After you log in to Telegram, this file should already be created for you.
 
 See [Configuration](./docs/Configutation.md) for details.
+
+## TODO
+
+- [ ] Command Support
+- [ ] Group Support
+- [ ] Bot Support
+- [ ] Plugin Support

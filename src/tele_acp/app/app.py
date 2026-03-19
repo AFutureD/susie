@@ -7,16 +7,17 @@ from tele_acp.acp import ACPRuntimeHub
 from tele_acp.channel import ChannelHub
 from tele_acp.chat import ChatManager
 from tele_acp.config import Config
+from tele_acp.constant import SUSIE_MCP_NAME
 from tele_acp.replier import ChatReplierHub
 from tele_acp.router import Router
 
 
 class APP:
     def __init__(self, config: Config):
-        from tele_acp.mcp import MCP, NAME, mcp_server
+        from tele_acp.mcp import MCP, mcp_server
 
         builtin_mcp = acp.schema.HttpMcpServer(
-            name=NAME,  # https://github.com/zed-industries/codex-acp/issues/55
+            name=SUSIE_MCP_NAME,  # https://github.com/zed-industries/codex-acp/issues/55
             url=mcp_server.mcp_url,
             headers=[],
             type="http",

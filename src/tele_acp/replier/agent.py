@@ -4,7 +4,6 @@ from typing import AsyncIterator
 from tele_acp_core import AgentConfig, Chatable, ChatMessage, ChatMessagePart, ChatMessageReplyable, ChatMessageTextPart
 
 from tele_acp.acp import ACPAgentRuntime, AcpMessage
-from tele_acp.mcp import NAME
 
 
 def convert_acp_message_to_chat_message(channel_id: str, chat_id: str, message: AcpMessage) -> ChatMessage:

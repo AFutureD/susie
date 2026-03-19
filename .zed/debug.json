@@ -1,6 +1,6 @@
 [
   {
-    "label": "tele-acp",
+    "label": "Susie Start",
     "adapter": "Debugpy",
     "request": "launch",
     "module": "tele_acp.cli",
@@ -13,7 +13,7 @@
     // "args": ["message", "send", "-1003870893788", "Hi"],
   },
   {
-    "label": "tele-acp Login User",
+    "label": "Susie Login User",
     "adapter": "Debugpy",
     "request": "launch",
     "module": "tele_acp.cli",
@@ -21,7 +21,7 @@
     "args": ["auth", "login"],
   },
   {
-    "label": "tele-acp Login Bot",
+    "label": "Susie Login Bot",
     "adapter": "Debugpy",
     "request": "launch",
     "module": "tele_acp.cli",
@@ -29,7 +29,7 @@
     "args": ["auth", "login", "--bot", "8777499436:AAGjg_RGoQwHS1p1NxShjutFEa4h9QVxxZU"],
   },
   {
-    "label": "tele-acp Logout",
+    "label": "Susie Logout",
     "adapter": "Debugpy",
     "request": "launch",
     "module": "tele_acp.cli",

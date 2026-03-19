@@ -4,8 +4,10 @@ from typing import TypeAlias
 from pydantic.fields import Field
 from tele_acp_core import ChannelSettings, ChannelType
 
-DEFAULT_TELEGRAM_API_ID = 611335
-DEFAULT_TELEGRAM_API_HASH = "d524b414d21f4d37f08684c1df41ac9c"
+# How to obtain your api_id and api_hash is described here: https://core.telegram.org/api/obtaining_api_id
+# The default values get from here: https://github.com/telegramdesktop/tdesktop/blob/dev/docs/api_credentials.md
+DEFAULT_TELEGRAM_API_ID = 17349
+DEFAULT_TELEGRAM_API_HASH = "344583e45741c457fe1862106095a5eb"
 
 
 class TelegramChannelType(ChannelType, enum.Enum):

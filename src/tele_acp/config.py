@@ -22,7 +22,6 @@ class ChatSettings(BaseModel):
 class Config(BaseModel):
     api_id: int | None = Field(default=None, description="Telegram api_id")
     api_hash: str | None = Field(default=None, description="Telegram api_hash")
-    dialog_idle_timeout_minutes: int = Field(default=30, ge=1, description="Idle timeout for per-dialog context")
 
     channels: dict[str, TypeTelegramChannel] = {}
     agents: list[AgentConfig] = [AgentConfig(id=DEFAULT_AGENT_ID)]
