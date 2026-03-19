@@ -2,5 +2,9 @@ from __future__ import annotations
 
 import importlib.metadata
 
+_meta = importlib.metadata.distribution("tele-acp")
+
 NAME = "ACP Interface on Telegram"
-VERSION = importlib.metadata.version("tele-acp")
+
+APP_NAME = _meta.name
+VERSION = _meta.version
