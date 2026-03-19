@@ -4,6 +4,7 @@ from typing import AsyncIterator
 from tele_acp_core import AgentConfig, Chatable, ChatMessage, ChatMessagePart, ChatMessageReplyable, ChatMessageTextPart
 
 from tele_acp.acp import ACPAgentRuntime, AcpMessage
+from tele_acp.constant import SUSIE_MCP_NAME
 
 
 def convert_acp_message_to_chat_message(channel_id: str, chat_id: str, message: AcpMessage) -> ChatMessage:
@@ -24,7 +25,7 @@ class AgentThread:
         prompt = (
             # IMPORTANT. We may move to system instructions but the acp do not support this.
             f"<IMPORTANT>\n"
-            f"always using `{NAME}` tools when you need to operate on Telegram.\n"
+            f"always using `{SUSIE_MCP_NAME}` tools when you need to operate on Telegram.\n"
             f"always pass `channel_id={channel_id}` to every tool call.\n"
             f"If you want to reply to the message, always call `send_message`, and you may call it multiple times.\n"
             f"</IMPORTANT>\n"
