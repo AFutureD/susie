@@ -1,4 +1,4 @@
-from .agent import ChatReplier
+from .agent import AgentReplier
 from .hub import ChatReplierHub
 
-__all__ = ["ChatReplier", "ChatReplierHub"]
+__all__ = ["AgentReplier", "ChatReplierHub"]

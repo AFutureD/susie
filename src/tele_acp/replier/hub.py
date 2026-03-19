@@ -3,7 +3,7 @@ from tele_acp_core import AgentConfig, ChatMessageReplyable
 from tele_acp.acp.runtime import ACPRuntimeHub
 from tele_acp.config import Config
 
-from .agent import ChatReplier
+from .agent import AgentReplier
 
 
 class ChatReplierHub:
@@ -19,5 +19,5 @@ class ChatReplierHub:
             return None
 
         runtime = await self._acp_hub.build_acp_runtime(agent_settings)
-        replier = ChatReplier(agent_settings, runtime)
+        replier = AgentReplier(agent_settings, runtime)
         return replier

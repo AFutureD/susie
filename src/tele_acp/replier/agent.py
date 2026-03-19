@@ -41,7 +41,7 @@ class AgentThread:
         self.logger = logging.getLogger(__name__)
 
 
-class ChatReplier(AgentThread, ChatMessageReplyable):
+class AgentReplier(AgentThread, ChatMessageReplyable):
     async def receive_message(self, chat: Chatable, message: ChatMessage) -> None:
         channel_id = message.channel_id
         chat_id = message.chat_id
