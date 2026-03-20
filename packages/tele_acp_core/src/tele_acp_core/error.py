@@ -8,19 +8,25 @@ def unreachable(message: str) -> Never:
     raise AssertionError(f"Expected code to be unreachable. {message}")
 
 
-class TeleCLIException(Exception):
+class SusieException(Exception):
     """Base exception class for Tele CLI."""
 
     pass
 
 
-class ConfigError(TeleCLIException, ValueError):
+class ConfigError(SusieException, ValueError):
     """Exception raised when there is an error in the configuration file."""
 
     pass
 
 
-class CurrentSessionPathNotValidError(TeleCLIException, RuntimeError):
+class CurrentSessionPathNotValidError(SusieException, RuntimeError):
     """Exception raised when there is an error during validating the current session path."""
+
+    pass
+
+
+class ChatAwareError(SusieException, RuntimeError):
+    """Exception raised when there is an error during executing a command."""
 
     pass

@@ -1,6 +1,6 @@
 import contextlib
 from datetime import datetime
-from typing import Any, Protocol, TypeAlias
+from typing import Any, Protocol
 
 from pydantic import ConfigDict, Field
 from pydantic.dataclasses import dataclass
@@ -17,7 +17,7 @@ class ChatMessageTextPart:
     text: str = Field(description="The text of the message")
 
 
-ChatMessagePart: TypeAlias = ChatMessageFilePart | ChatMessageTextPart
+type ChatMessagePart = ChatMessageFilePart | ChatMessageTextPart
 
 
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
@@ -78,5 +78,14 @@ class ChatMessageQueryable(Protocol):
         ...
 
 
-class ChatMessageReplyable(Protocol):
-    async def receive_message(self, chat: Chatable, message: ChatMessage) -> None: ...
+class ChatReplyable(Protocol):
+    async def receive_message(self, chat: Chatable, message: ChatMessage) -> bool:
+        """
+        Handle messages sent by remote peer, and reply to the chat if needed.
+        Args:
+            chat: The chat where the message is sent to.
+            message: The message sent by remote peer.
+        Returns:
+            Whether the message is handled.
+        """
+        ...

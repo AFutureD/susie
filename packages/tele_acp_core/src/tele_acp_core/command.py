@@ -1,6 +1,8 @@
-from typing import Protocol
+from typing import Any, Callable, Protocol, TypeAlias
 
 from pydantic import BaseModel, Field
+
+AnyFunction: TypeAlias = Callable[..., Any]
 
 
 class Command(BaseModel):
@@ -13,14 +15,14 @@ class Command(BaseModel):
       - /model gpt-5.4: Switch the model to gpt-5.4
     """
 
-    command: str = Field(description="The command name")
+    fn: AnyFunction
+    name: str = Field(description="The command name")
     description: str = Field(description="The command description")
-
-    # TODO: generate function's signature and args schema
-    structured_args_schema: dict[str, any] | None = None
 
 
 class CommandExecutable(Protocol):
-    async def execute_command(self, command: Command, args: dict[str, any] | None):
+    async def can_execute(self, name: str) -> bool: ...
+
+    async def execute_command(self, name: str, *args, **kwargs):
         """Perform the command with the given arguments."""
         ...
