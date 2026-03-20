@@ -1,10 +1,12 @@
-from tele_acp_core import AgentConfig, ChatMessageReplyable
+from tele_acp_core import AgentConfig, ChatReplyable
 
 from tele_acp.acp.runtime import ACPRuntimeHub
 from tele_acp.command import CommandCenter
 from tele_acp.config import Config
 
 from .agent import AgentReplier
+from .command import CommandReplier
+from .compose import ComposedReplier
 
 
 class ChatReplierHub:
@@ -15,11 +17,15 @@ class ChatReplierHub:
 
         self.settings: dict[str, AgentConfig] = {agent.id: agent for agent in config.agents}
 
-    async def spawn_replier(self, agent_id: str) -> ChatMessageReplyable:
+    async def spawn_replier(self, agent_id: str) -> ChatReplyable:
         agent_settings = self.settings.get(agent_id)
         if agent_settings is None:
             raise RuntimeError(f"agent not found for id: {agent_id}")
 
         runtime = await self._acp_hub.build_acp_runtime(agent_settings)
-        replier = AgentReplier(agent_settings, runtime)
+        agent_replier = AgentReplier(agent_settings, runtime)
+
+        command_replier = CommandReplier(self._command_center)
+
+        replier = ComposedReplier(command_replier, agent_replier)
         return replier

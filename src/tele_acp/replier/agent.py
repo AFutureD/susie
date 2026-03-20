@@ -2,7 +2,7 @@ import logging
 from typing import AsyncIterator
 
 import jinja2
-from tele_acp_core import AgentConfig, Chatable, ChatMessage, ChatMessagePart, ChatMessageReplyable, ChatMessageTextPart
+from tele_acp_core import AgentConfig, Chatable, ChatMessage, ChatMessagePart, ChatMessageTextPart, ChatReplyable
 
 from tele_acp.acp import ACPAgentRuntime, AcpMessage
 from tele_acp.constant import SUSIE_MCP_NAME
@@ -41,14 +41,14 @@ class AgentThread:
         self.logger = logging.getLogger(__name__)
 
 
-class AgentReplier(AgentThread, ChatMessageReplyable):
-    async def receive_message(self, chat: Chatable, message: ChatMessage) -> None:
+class AgentReplier(AgentThread, ChatReplyable):
+    async def receive_message(self, chat: Chatable, message: ChatMessage) -> bool:
         channel_id = message.channel_id
         chat_id = message.chat_id
 
         text_part = next((x for x in message.parts if isinstance(x, ChatMessageTextPart)), None)
         if text_part is None:
-            return
+            return False
 
         template = jinja2.Template(PROMPT)
         content = template.render(channel_id=channel_id, chat_id=chat_id, content=text_part.text)
@@ -69,3 +69,4 @@ class AgentReplier(AgentThread, ChatMessageReplyable):
                 await chat.send_message(msg)
 
         self.logger.info("Message sent for peer: %s", message.channel_id)
+        return True

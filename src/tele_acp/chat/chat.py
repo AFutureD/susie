@@ -3,7 +3,7 @@ import contextlib
 import logging
 from datetime import datetime
 
-from tele_acp_core import Channel, Chatable, ChatMessage, ChatMessageQueryable, ChatMessageReplyable
+from tele_acp_core import Channel, Chatable, ChatAwareError, ChatMessage, ChatMessageQueryable, ChatMessageTextPart, ChatReplyable
 
 from tele_acp.config import ChatSettings
 
@@ -11,7 +11,7 @@ IGNORE_MESSAGE_DURATION_IN_SECONDS = 120.0
 
 
 class Chat(Chatable, ChatMessageQueryable):
-    def __init__(self, chat_id: str, channel: Channel, settings: ChatSettings, replier: ChatMessageReplyable):
+    def __init__(self, chat_id: str, channel: Channel, settings: ChatSettings, replier: ChatReplyable):
         self.id = chat_id
         self.replier = replier
         self.channel = channel
@@ -48,4 +48,18 @@ class Chat(Chatable, ChatMessageQueryable):
         lifespan = message.lifespan or contextlib.nullcontext()
 
         async with lifespan:
-            await self.replier.receive_message(self, message)
+            try:
+                _ = await self.replier.receive_message(self, message)
+            except ChatAwareError as e:
+                await self.send_message(
+                    ChatMessage(
+                        id=None,
+                        channel_id=message.channel_id,
+                        chat_id=message.chat_id,
+                        receiver=None,
+                        out=False,
+                        mute=False,
+                        parts=[ChatMessageTextPart(str(e))],
+                    )
+                )
+                self.logger.error(f"Error while processing message: {e}")
