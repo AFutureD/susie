@@ -52,3 +52,6 @@ class ChatManager(Chatable):
             agent=DEFAULT_AGENT_ID,
             channel=channel_id,
         )
+
+    def get_commands(self) -> list[str]:
+        return []

@@ -1,7 +1,7 @@
 from .agent import DEFAULT_AGENT_ID, AgentConfig
 from .channel import Channel, ChannelPeer, ChannelSettings, ChannelType
 from .chat import Chatable, ChatInfo, ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageQueryable, ChatMessageTextPart, ChatReplyable
-from .command import Command, CommandExecutable
+from .command import AnyFunction, Command, CommandExecutable
 from .error import ChatAwareError, ConfigError, CurrentSessionPathNotValidError, unreachable
 from .session import SessionInfo
 
@@ -27,4 +27,5 @@ __all__ = [
     "Command",
     "CommandExecutable",
     "ChatAwareError",
+    "AnyFunction",
 ]

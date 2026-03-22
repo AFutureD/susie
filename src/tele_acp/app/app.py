@@ -43,6 +43,9 @@ class APP:
         channel_hub.set_router(router)
         mcp_server.set_chat_manager(chat_manager)
 
+        for command in chat_manager.get_commands():
+            command_center.register(command)
+
         self._config = config
         self._chat_manager = chat_manager
         self._router = router

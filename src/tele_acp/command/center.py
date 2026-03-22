@@ -66,7 +66,7 @@ class CommandInfo(BaseModel):
 class CommandCenter(CommandExecutable):
     def __init__(self) -> None:
         self._registered_commands: dict[str, CommandInfo] = {}
-        self.add_command(self.show_help, name="help", description="show help message")
+        self.register_command(self.show_help, name="help", description="show help message")
 
     def get_command(self, name: str) -> CommandInfo | None:
         return self._registered_commands.get(name)
@@ -99,24 +99,29 @@ class CommandCenter(CommandExecutable):
 
     def command(self, name: str | None = None, description: str | None = None) -> Callable[[AnyFunction], AnyFunction]:
         def decorator(fn: AnyFunction) -> AnyFunction:
-            self.add_command(fn, name=name, description=description)
+            self.register_command(fn, name=name, description=description)
             return fn
 
         return decorator
 
-    def add_command(self, fn: AnyFunction, *, name: str | None = None, description: str | None = None) -> Command:
+    def register(self, command: Command) -> CommandInfo:
+        return self.register_command(command.fn, name=command.name, description=command.description)
+
+    def register_command(self, fn: AnyFunction, *, name: str | None = None, description: str | None = None) -> CommandInfo:
         command_name = name or fn.__name__  # ty:ignore[unresolved-attribute]
         if name == "<lambda>":
             raise ValueError("You must provide a name for lambda functions")
 
-        if command_name in self._registered_commands_by_name:
+        if command_name in self._registered_commands:
             raise ValueError(f"command already registered: {command_name}")
 
         description = description or inspect.getdoc(fn) or ""
 
-        context_kwargs = {}
-        context_kwargs[ChatMessage] = find_parameter_name(fn, ChatMessage)
-        context_kwargs[Context] = find_parameter_name(fn, Context)
+        context_kwargs: dict[type, str] = {}
+        if key := find_parameter_name(fn, ChatMessage):
+            context_kwargs[ChatMessage] = key
+        if key := find_parameter_name(fn, Context):
+            context_kwargs[Context] = key
 
         command = CommandInfo(fn=fn, name=command_name, description=description, context_kwargs=context_kwargs)
         self._registered_commands[command_name] = command
