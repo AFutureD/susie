@@ -17,7 +17,7 @@ class CommandReplier(ChatReplyable):
             return False
 
         command = text.removeprefix(SUSIE_COMMAND_TRIGGER)
-        name, args, kwargs = self.parse_command(command)
+        name, args = self.parse_command(command)
         if not await self._executor.can_execute(name):
             await chat.send_message(
                 ChatMessage(
@@ -32,7 +32,7 @@ class CommandReplier(ChatReplyable):
             )
             return True
 
-        response = await self._executor.execute_command(name, *args, **kwargs)
+        response = await self._executor.execute_command(name, *args, message=message)
         if isinstance(response, str):
             response_message = ChatMessage(
                 id=None,
@@ -47,6 +47,6 @@ class CommandReplier(ChatReplyable):
 
         return True
 
-    def parse_command(self, command: str) -> tuple[str, list, dict]:
+    def parse_command(self, command: str) -> tuple[str, list]:
         name, *args = command.split()
-        return name, args, {}
+        return name, args

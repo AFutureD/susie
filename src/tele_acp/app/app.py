@@ -6,7 +6,7 @@ import acp
 from tele_acp.acp import ACPRuntimeHub
 from tele_acp.channel import ChannelHub
 from tele_acp.chat import ChatManager
-from tele_acp.command import CommandCenter
+from tele_acp.command import command_center
 from tele_acp.config import Config
 from tele_acp.constant import SUSIE_MCP_NAME
 from tele_acp.replier import ChatReplierHub
@@ -26,8 +26,8 @@ class APP:
 
         # Layer One: IO
         _ = mcp_server
+        _ = command_center
         acp_hub = ACPRuntimeHub(config, mcp_servers=[builtin_mcp])
-        command_center = CommandCenter()
 
         # Layer Two: The Data Process
         replier_hub = ChatReplierHub(config, acp_hub, command_center)
