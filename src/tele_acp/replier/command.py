@@ -22,12 +22,13 @@ class CommandReplier(ChatReplyable):
             if self.can_execute(name):
                 await self.execute_command(chat, message, name, *args)
         else:
-            await self._replier.receive_message(chat, message)
+            if replier := self._replier:
+                await replier.receive_message(chat, message)
 
     async def can_execute(self, name: str) -> bool:
-        return self.command_center.can_execute(name)
+        return await self.command_center.can_execute(name)
 
-    async def execute_command(self, chat: Chatable, message: ChatMessage, name: str, *args, **kwargs):
+    async def execute_command(self, chat: Chatable, message: ChatMessage, name: str, *args):
         try:
             result = await self.command_center.execute_command(name, *args, message=message)
             if isinstance(result, str):

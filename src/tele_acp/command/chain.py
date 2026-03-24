@@ -59,21 +59,33 @@ class CommandInfo(BaseModel):
     fn: AnyFunction
     context_kwargs: dict[type, str] = {}
 
-    def __call__(self, *args) -> Any:
-        return self.fn(*args)
+    def __call__(self, *args, **kwargs) -> Any:
+        return self.fn(*args, **kwargs)
 
 
 class CommandChain(CommandExecutable):
     def __init__(self, chain_to: CommandChain | None = None) -> None:
+        self.parent_command = chain_to
         self._registered_commands: dict[str, CommandInfo] = {}
+
         self.register_command(self.show_help, name="help", description="show help message")
-        # TODO: handle chain_to
 
     def get_command(self, name: str) -> CommandInfo | None:
-        return self._registered_commands.get(name)
+        if ret := self._registered_commands.get(name):
+            return ret
+
+        if (parent := self.parent_command) and (ret := parent.get_command(name)):
+            return ret
+
+        return None
 
     async def can_execute(self, name: str) -> bool:
-        return name in self._registered_commands
+        match = name in self._registered_commands
+
+        if parent := self.parent_command:
+            match = match | await parent.can_execute(name)
+
+        return match
 
     async def execute_command(self, name: str, *args, **kwargs) -> Any:
         name = name.strip()
