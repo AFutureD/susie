@@ -1,3 +1,5 @@
-from .center import CommandCenter, command_center
+from .chain import CommandChain
 
-__all__ = ["CommandCenter", "command_center"]
+command_chain = CommandChain()
+
+__all__ = ["CommandChain", "command_chain"]

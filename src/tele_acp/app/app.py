@@ -6,7 +6,7 @@ import acp
 from tele_acp.acp import ACPRuntimeHub
 from tele_acp.channel import ChannelHub
 from tele_acp.chat import ChatManager
-from tele_acp.command import command_center
+from tele_acp.command import command_chain
 from tele_acp.config import Config
 from tele_acp.constant import NAME, SUSIE_MCP_NAME
 from tele_acp.replier import ChatReplierHub
@@ -26,11 +26,11 @@ class APP:
 
         # Layer One: IO
         _ = mcp_server
-        _ = command_center
+        _ = command_chain
         acp_hub = ACPRuntimeHub(config, mcp_servers=[builtin_mcp])
 
         # Layer Two: The Data Process
-        replier_hub = ChatReplierHub(config, acp_hub, command_center)
+        replier_hub = ChatReplierHub(config, acp_hub, command_chain)
         channel_hub = ChannelHub(config)
 
         # Layer Three: The Domain Logic
@@ -44,7 +44,7 @@ class APP:
         mcp_server.set_chat_manager(chat_manager)
 
         for command in chat_manager.get_commands():
-            command_center.register(command, scope=NAME)
+            command_chain.register(command, scope=NAME)
 
         self._config = config
         self._chat_manager = chat_manager

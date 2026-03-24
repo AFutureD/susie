@@ -2,14 +2,14 @@ import shlex
 
 from tele_acp_core import Chatable, ChatMessage, ChatMessageTextPart, ChatReplyable
 
-from tele_acp.command import CommandCenter
+from tele_acp.command import CommandChain
 from tele_acp.constant import SUSIE_COMMAND_TRIGGER
 
 
 class CommandReplier(ChatReplyable):
-    def __init__(self, replier: ChatReplyable | None = None, chain_to: CommandCenter | None = None):
+    def __init__(self, replier: ChatReplyable | None = None, chain_to: CommandChain | None = None):
         self._replier = replier
-        self.command_center = CommandCenter(chain_to)
+        self.command_center = CommandChain(chain_to)
 
     async def receive_message(self, chat: Chatable, message: ChatMessage):
         if (

@@ -63,8 +63,8 @@ class CommandInfo(BaseModel):
         return self.fn(*args)
 
 
-class CommandCenter(CommandExecutable):
-    def __init__(self, chain_to: CommandCenter | None = None) -> None:
+class CommandChain(CommandExecutable):
+    def __init__(self, chain_to: CommandChain | None = None) -> None:
         self._registered_commands: dict[str, CommandInfo] = {}
         self.register_command(self.show_help, name="help", description="show help message")
         # TODO: handle chain_to
@@ -132,6 +132,3 @@ class CommandCenter(CommandExecutable):
     async def show_help(self) -> str:
         lines = [f"/{command.name}: {command.description}" for command in self._registered_commands.values()]
         return "\n".join(lines)
-
-
-command_center = CommandCenter()

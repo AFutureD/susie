@@ -5,7 +5,7 @@ import jinja2
 from tele_acp_core import AgentConfig, Chatable, ChatMessage, ChatMessagePart, ChatMessageTextPart, ChatReplyable
 
 from tele_acp.acp import ACPAgentRuntime, AcpMessage
-from tele_acp.command import CommandCenter
+from tele_acp.command import CommandChain
 from tele_acp.constant import SUSIE_MCP_NAME
 
 from .command import CommandReplier
@@ -73,7 +73,7 @@ class AgentThread(ChatReplyable):
 
 
 class AgentReplier(CommandReplier):
-    def __init__(self, settings: AgentConfig, acp_runtime: ACPAgentRuntime, chain_to: CommandCenter | None = None):
+    def __init__(self, settings: AgentConfig, acp_runtime: ACPAgentRuntime, chain_to: CommandChain | None = None):
         thread = AgentThread(settings=settings, acp_runtime=acp_runtime)
         super().__init__(thread, chain_to)
 
