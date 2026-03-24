@@ -4,15 +4,15 @@ from tele_acp.acp.runtime import ACPRuntimeHub
 from tele_acp.command import CommandChain
 from tele_acp.config import Config
 
-from .agent import AgentReplier
+from .agent import AgentCommandReplier
 from .compose import ComposedReplier
 
 
 class ChatReplierHub:
-    def __init__(self, config: Config, acp_hub: ACPRuntimeHub, command_center: CommandChain) -> None:
+    def __init__(self, config: Config, acp_hub: ACPRuntimeHub, command_chain: CommandChain) -> None:
         self._config = config
         self._acp_hub = acp_hub
-        self._command_center = command_center
+        self._command_chain = command_chain
 
         self.settings: dict[str, AgentConfig] = {agent.id: agent for agent in config.agents}
 
@@ -22,7 +22,7 @@ class ChatReplierHub:
             raise RuntimeError(f"agent not found for id: {agent_id}")
 
         runtime = await self._acp_hub.build_acp_runtime(agent_settings)
-        agent_replier = AgentReplier(agent_settings, runtime, self._command_center)
+        agent_replier = AgentCommandReplier(agent_settings, runtime, self._command_chain)
 
         replier = ComposedReplier(agent_replier)
         return replier

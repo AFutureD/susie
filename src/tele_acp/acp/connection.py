@@ -71,6 +71,9 @@ class ACPAgentConnection:
                 )
             )
 
+            # TODO: add jsonl logger
+            conn._conn.add_observer(lambda x: self.logger.debug(f"JSONRPC: {x}"))
+
             ret = await conn.initialize(
                 protocol_version=acp.PROTOCOL_VERSION,
                 client_info=acp.schema.Implementation(name="tele-acp", title="tele-acp", version=VERSION),

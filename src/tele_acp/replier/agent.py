@@ -37,11 +37,14 @@ def convert_acp_message_to_chat_message(channel_id: str, chat_id: str, message: 
     return ChatMessage(id=None, channel_id=channel_id, chat_id=chat_id, receiver=None, out=False, mute=False, parts=parts)
 
 
-class AgentThread(ChatReplyable):
+class AgentReplier(ChatReplyable):
     def __init__(self, settings: AgentConfig, acp_runtime: ACPAgentRuntime):
         self.settings = settings
         self._acp_runtime = acp_runtime
         self.logger = logging.getLogger(__name__)
+
+    async def new_session(self):
+        _ = await self._acp_runtime.new_session()
 
     async def receive_message(self, chat: Chatable, message: ChatMessage):
         channel_id = message.channel_id
@@ -72,14 +75,14 @@ class AgentThread(ChatReplyable):
         self.logger.info("Message sent for peer: %s", message.channel_id)
 
 
-class AgentReplier(CommandReplier):
+class AgentCommandReplier(CommandReplier):
     def __init__(self, settings: AgentConfig, acp_runtime: ACPAgentRuntime, chain_to: CommandChain | None = None):
-        thread = AgentThread(settings=settings, acp_runtime=acp_runtime)
-        super().__init__(thread, chain_to)
+        agent_replier = AgentReplier(settings=settings, acp_runtime=acp_runtime)
+        super().__init__(agent_replier, chain_to)
 
-        self.thread = thread
+        self.agent_replier = agent_replier
+        self.command_center.register_command(fn=self.new_session, name="new", description="Start a new session")
 
-        self.command_center.register_command(fn=self.echo, name="echo", description="Echo Messages")
-
-    def echo(self, message: str) -> str:
-        return message
+    async def new_session(self):
+        await self.agent_replier.new_session()
+        return "ok"

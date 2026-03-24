@@ -45,27 +45,39 @@ class ACPAgentRuntime(ACPAgentConnection):
         super().__init__(agent_config, cwd, mcp_servers, self._handle_session_update)
 
         self.id = id
-        self._session: acp.NewSessionResponse | None = None
+        self._session_id: str | None = None
 
     # MARK: Session
 
     @property
-    async def session(self) -> acp.NewSessionResponse:
-        if self._session:
-            return self._session
+    def session_id(self) -> str | None:
+        return self._session_id
 
-        session = await self._new_session()
-        return session
+    async def require_session_id(self) -> str:
+        if session_id := self._session_id:
+            return self._session_id
+
+        session_id = await self._new_session()
+        return session_id
 
     async def new_session(self) -> str:
-        session = await self._new_session()
-        return session.session_id
+        session_id = await self._new_session()
+        return session_id
 
-    async def _new_session(self) -> acp.NewSessionResponse:
+    async def _new_session(self) -> str:
+        if not self.is_active:
+            await self.cancel()
+
         try:
-            session = await self.connction.new_session(cwd=self._cwd, mcp_servers=self._mcp_servers)
-            self._session = session
-            return session
+            new_session = await self.connction.new_session(cwd=self._cwd, mcp_servers=self._mcp_servers)
+            session_id = new_session.session_id
+
+            # TODO: [2026/03/24 <Huanan>] it will raise "Resource not found" from codex acp. do not know why.
+            # issue: https://github.com/zed-industries/codex-acp/issues/203
+            # _ = await self.connction.load_session(cwd=self._cwd, session_id=session_id)
+
+            self._session_id = session_id
+            return session_id
         except Exception as e:
             self.logger.error(f"Failed to create session: {e}")
             raise
@@ -77,7 +89,7 @@ class ACPAgentRuntime(ACPAgentConnection):
         return self._update_queue is not None
 
     async def prompt(self, parts: list[str]) -> AsyncIterator[AcpMessage]:
-        session = await self.session
+        session_id = await self.require_session_id()
 
         prompt: list[AcpContentBlock] = list(map(lambda m: acp.text_block(m), parts))
 
@@ -88,7 +100,7 @@ class ACPAgentRuntime(ACPAgentConnection):
 
         async def turn_task() -> acp.PromptResponse:
             try:
-                ret = await self.connction.prompt(prompt=prompt, session_id=session.session_id)
+                ret = await self.connction.prompt(prompt=prompt, session_id=session_id)
                 return ret
             finally:
                 update_queue.shutdown()
@@ -135,16 +147,16 @@ class ACPAgentRuntime(ACPAgentConnection):
         if not self.is_active:
             return
 
-        session = await self.session
-        await self.connction.cancel(session.session_id)
+        if session_id := self._session_id:
+            await self.connction.cancel(session_id)
 
     async def _handle_session_update(self, session_id: str, update: ACPUpdateChunk) -> None:
         queue = self._update_queue
-        session = self._session
-        if queue is None or session is None:
+        current_session_id = self._session_id
+        if queue is None or current_session_id is None:
             return
 
-        if session.session_id != session_id:
+        if current_session_id != session_id:
             return
 
         try:
