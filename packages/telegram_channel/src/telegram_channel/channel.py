@@ -10,7 +10,7 @@ from telethon.tl.custom import Message as TeleMessage
 from telethon.tl.custom.dialog import Dialog as TeleDialog
 
 from .client import TGClient
-from .settings import TelegramUserChannel, TypeTelegramChannel
+from .settings import TELEGRAM_PEER_ALL_INDICATOR, TelegramChannelGroupPolicy, TelegramUserChannel, TypeTelegramChannel
 
 
 def peer_id_into_raw_int(peer_id: telethon.types.TypePeer) -> int:
@@ -142,51 +142,91 @@ class TelegramChannel(Channel):
     async def is_message_allowed(self, message: TeleMessage) -> bool:
         """If Peer is allowed by the whitelist or contact list"""
 
-        peer: telethon.types.TypePeer = message.peer_id
-        sender: telethon.types.TypePeer | None = message.from_id  # None if it is an anonymous messages
+        peer_id: telethon.types.TypePeer = message.peer_id
+        chat_id = peer_id_into_chat_id(peer_id)
+        raw_id = peer_id_into_raw_int(peer_id)
 
-        peer_raw_id = peer_id_into_raw_int(peer)
-        chat_id = peer_id_into_chat_id(peer)
+        match peer_id:
+            case telethon.types.PeerUser():
 
-        sender_raw_id = peer_id_into_raw_int(sender) if sender else None
-        sender_chat_id = peer_id_into_chat_id(sender) if sender else None
+                async def _is_allowed_by_contact(settings: TypeTelegramChannel, peer: telethon.types.PeerUser) -> bool:
+                    if not isinstance(settings, TelegramUserChannel):
+                        return False
 
-        def _is_allowed_by_white_list(settings: TypeTelegramChannel) -> bool:
-            whitelist = settings.whitelist
-            if whitelist is None:
-                return False
+                    if not settings.allow_contacts:
+                        return False
 
-            # check if chat_id in white list
-            ret = any(item in {chat_id, str(peer_raw_id)} for item in whitelist)
+                    contacts = await self._tele_client.get_contact_user_peer()
+                    match = any(contact.user_id == peer.user_id for contact in contacts)
 
-            if isinstance(peer, telethon.types.PeerUser):
+                    return match
+
+                def _is_allowed_by_white_list(settings: TypeTelegramChannel, peer: telethon.types.PeerUser) -> bool:
+                    whitelist = settings.whitelist
+                    if whitelist is None:
+                        return False
+
+                    ret = any(str(item) in {chat_id, str(peer.user_id)} for item in whitelist)
+                    return ret
+
+                match_contact_list = await _is_allowed_by_contact(self.settings, peer_id)
+                match_whitelist = _is_allowed_by_white_list(self.settings, peer_id)
+
+                return match_whitelist or match_contact_list
+
+            case telethon.types.PeerChannel() | telethon.types.PeerChat():
+                """
+                https://docs.telethon.dev/en/v2/concepts/peers.html
+                
+                Telegram uses Peers to categorize users, groups and channels, much like how Telethon does. It also has the concept of InputPeers, which are commonly used as input parameters when sending requests. These match the concept of Telethon’s peer references.
+
+                The main confusion in Telegram’s API comes from the word “chat”.
+
+                In the TL schema definitions, there are two boxed types, User and Chat. A boxed User can only be the bare user, but the boxed Chat can be either a bare chat or a bare channel.
+    
+                A bare chat always refers to small groups. A bare channel can have either the broadcast or the megagroup flag set to True.
+
+                A bare channel with the broadcast flag set to True is known as a broadcast channel. A bare channel with the megagroup flag set to True is known as a supergroup.
+
+                A bare chat has less features available than a bare channel megagroup. Official clients are very good at hiding this difference. They will implicitly convert bare chat to bare channel megagroup when doing certain operations. Doing things like setting a username is actually a two-step process (migration followed by updating the username). Official clients transparently merge the history of migrated channel with their old chat.
+
+                In Telethon:
+                - A User always corresponds to user.
+                - A Group represents either a chat or a channel megagroup.
+                - A Channel represents a channel broadcast.
+
+                Telethon classes aim to map to similar concepts in official applications.
+                """
+                if isinstance(message.chat, telethon.types.Channel):
+                    if message.chat.broadcast:
+                        return False
+
+                sender: telethon.types.TypePeer | None = message.from_id  # None if it is an anonymous messages
+                if sender is None:
+                    return False  # Do Not Respond to anonymous messages
+
+                # TODO: [2026/03/24 <Huanan>] the message mentioned is not set to True.
+                if not message.mentioned:
+                    return False  # In early stage, we are only support mentioned message.
+
+                policy: TelegramChannelGroupPolicy | None = None
+                policy = policy or self.settings.groups.get(str(raw_id))
+                policy = policy or self.settings.groups.get(chat_id)
+                policy = policy or self.settings.groups.get(TELEGRAM_PEER_ALL_INDICATOR)
+
+                if policy is None:
+                    return False
+
+                if policy.ignore_mention:
+                    return False
+
+                sender_raw_id = peer_id_into_raw_int(sender)
+                sender_chat_id = peer_id_into_chat_id(sender)
+
+                ret = any(str(item) in {sender_chat_id, str(sender_raw_id)} for item in policy.whitelist)
                 return ret
 
-            if sender_raw_id is None or sender_chat_id is None:
-                return False  # Do Not Respond to anonymous messages
-
-            ret &= any(item in {sender_raw_id, str(sender_chat_id)} for item in whitelist)
-            return ret
-
-        async def _is_allowed_by_contact(settings: TypeTelegramChannel) -> bool:
-            if not isinstance(settings, TelegramUserChannel):
-                return False
-
-            if not settings.allow_contacts:
-                return False
-
-            if not isinstance(peer, telethon.types.PeerUser):
-                return False
-
-            contacts = await self._tele_client.get_contact_user_peer()
-            match = any(contact.user_id == peer.user_id for contact in contacts)
-
-            return match
-
-        match_white_list: bool = _is_allowed_by_white_list(self.settings)
-        match_contact_list = await _is_allowed_by_contact(self.settings)
-
-        return match_white_list or match_contact_list
+        unreachable("")
 
     async def list_chats(self, with_archived: bool = False) -> list[ChatInfo]:
         archived = None if with_archived else False

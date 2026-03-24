@@ -1,6 +1,7 @@
 import enum
 from typing import TypeAlias
 
+from pydantic import BaseModel
 from pydantic.fields import Field
 from tele_acp_core import ChannelSettings, ChannelType
 
@@ -8,6 +9,14 @@ from tele_acp_core import ChannelSettings, ChannelType
 # The default values get from here: https://github.com/telegramdesktop/tdesktop/blob/dev/docs/api_credentials.md
 DEFAULT_TELEGRAM_API_ID = 17349
 DEFAULT_TELEGRAM_API_HASH = "344583e45741c457fe1862106095a5eb"
+
+
+TELEGRAM_PEER_ALL_INDICATOR = "*"
+
+
+class TelegramChannelGroupPolicy(BaseModel):
+    whitelist: list[str] = Field(default=[TELEGRAM_PEER_ALL_INDICATOR], description="The list of allowed users. peer id.")
+    ignore_mention: bool = Field(default=False, description="Whether to treat mentioned as normal message")
 
 
 class TelegramChannelType(ChannelType, enum.Enum):
@@ -18,7 +27,13 @@ class TelegramChannelType(ChannelType, enum.Enum):
 class TelegramChannel(ChannelSettings):
     session_name: str = Field(description="The session name for the Telegram client")
 
-    whitelist: list[str] | None = Field(default=[], description="The list of allowed users. peer id or group id")
+    # will move to `users` and `TelegramChannelUserPolicy`, for now it's enough.
+    whitelist: list[str] | None = Field(default=[], description="The list of allowed users. peer id")
+
+    groups: dict[str, TelegramChannelGroupPolicy] = Field(
+        default={TELEGRAM_PEER_ALL_INDICATOR: TelegramChannelGroupPolicy()},
+        description="The list of allowed groups",
+    )
 
 
 class TelegramUserChannel(TelegramChannel):
