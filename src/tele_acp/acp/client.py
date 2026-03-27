@@ -83,7 +83,7 @@ class ACPClient(acp.Client):
 
         options = [o for o in options if o.kind == "allow_always" or o.kind == "allow_once"]
 
-        if len(options) <= 1:
+        if len(options) < 1:
             unreachable("At least one option is required")
 
         return schema.RequestPermissionResponse(outcome=AllowedOutcome(outcome="selected", option_id=options[0].option_id))
