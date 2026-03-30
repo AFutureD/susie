@@ -60,9 +60,10 @@ def parse_entity_from_text(text: str | None, entity: telethon.types.TypeMessageE
         return None
 
     entity_text = text.encode("utf-16-le")
-    entity_text = entity_text[entity.offset * 2: (entity.offset + entity.length) * 2]
+    entity_text = entity_text[entity.offset * 2 : (entity.offset + entity.length) * 2]
 
     return entity_text.decode("utf-16-le")
+
 
 def convert_telegram_message_to_chat_message(
     channel_id: str,
@@ -78,8 +79,19 @@ def convert_telegram_message_to_chat_message(
     parts: list[ChatMessagePart] = [ChatMessageTextPart(text_part)] if text_part else []
 
     return ChatMessage(
-        id=message_id, channel_id=channel_id, chat_id=chat_id, receiver=None, reply_to=str(reply_to), out=message.out, mute=message.silent or False, parts=parts, lifespan=lifespan
+        id=message_id,
+        channel_id=channel_id,
+        chat_id=chat_id,
+        receiver=None,
+        reply_to=str(reply_to),
+        out=message.out,
+        mute=message.silent or False,
+        parts=parts,
+        lifespan=lifespan,
     )
+
+
+type MessageHandler = Callable[[ChatMessage], Awaitable[None]]
 
 
 class TelegramChannel(Channel):
@@ -88,7 +100,12 @@ class TelegramChannel(Channel):
     """
 
     def __init__(
-        self, id: str, api_id: int | None, api_hash: str | None, settings: TypeTelegramChannel, message_handler: Callable[[ChatMessage], Awaitable[None]]
+        self,
+        id: str,
+        api_id: int | None,
+        api_hash: str | None,
+        settings: TypeTelegramChannel,
+        message_handler: MessageHandler,
     ):
         tele_client = TGClient.create_as_login(api_id, api_hash, settings)
         tele_client.add_event_handler(self._on_receive_new_message_event, telethon.events.NewMessage())
@@ -147,7 +164,7 @@ class TelegramChannel(Channel):
         # if not isinstance(peer_id, telethon.types.PeerUser):  # hard-coded peer filter used during development
         #     return
 
-        chat_message = convert_telegram_message_to_chat_message(self.id, message, lifespan=self.build_message_lifespan(peer_id, message.id))
+        chat_message = convert_telegram_message_to_chat_message(self.id, message, lifespan=self.build_message_lifespan(peer=peer_id, message_id=message.id))
         await self.receive_message(chat_message)
 
     @contextlib.asynccontextmanager
@@ -196,13 +213,13 @@ class TelegramChannel(Channel):
             case telethon.types.PeerChannel() | telethon.types.PeerChat():
                 """
                 https://docs.telethon.dev/en/v2/concepts/peers.html
-                
+
                 Telegram uses Peers to categorize users, groups and channels, much like how Telethon does. It also has the concept of InputPeers, which are commonly used as input parameters when sending requests. These match the concept of Telethon’s peer references.
 
                 The main confusion in Telegram’s API comes from the word “chat”.
 
                 In the TL schema definitions, there are two boxed types, User and Chat. A boxed User can only be the bare user, but the boxed Chat can be either a bare chat or a bare channel.
-    
+
                 A bare chat always refers to small groups. A bare channel can have either the broadcast or the megagroup flag set to True.
 
                 A bare channel with the broadcast flag set to True is known as a broadcast channel. A bare channel with the megagroup flag set to True is known as a supergroup.
@@ -239,7 +256,7 @@ class TelegramChannel(Channel):
                         entities = message.entities or []
                         entities = [entity for entity in entities if isinstance(entity, telethon.types.MessageEntityMention)]
 
-                        mentions = map(lambda  x: parse_entity_from_text(message.message, x), entities)
+                        mentions = map(lambda x: parse_entity_from_text(message.message, x), entities)
                         return any(username in [mention, mention.removeprefix("@")] for mention in mentions)
 
                     def mentioned_by_userid() -> bool:

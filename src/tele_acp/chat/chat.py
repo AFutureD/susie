@@ -60,6 +60,7 @@ class Chat(Chatable, ChatMessageQueryable):
                         channel_id=message.channel_id,
                         chat_id=message.chat_id,
                         receiver=None,
+                        reply_to=None,
                         out=False,
                         mute=False,
                         parts=[ChatMessageTextPart(str(e))],
