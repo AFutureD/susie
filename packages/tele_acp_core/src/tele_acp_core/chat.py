@@ -88,6 +88,12 @@ class ChatMessageQueryable(Protocol):
 
 
 class ChatReplyable(Protocol):
+    async def cancel(self):
+        """
+        cancel current message turn if exists
+        """
+        ...
+
     async def receive_message(self, chat: Chatable, message: ChatMessage):
         """
         Handle messages sent by remote peer, and reply to the chat if needed.

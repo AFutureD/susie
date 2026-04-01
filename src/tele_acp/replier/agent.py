@@ -61,6 +61,9 @@ class AgentReplier(ChatCommandResponder):
         ret = await self._acp_runtime.set_model(value)
         return "ok" if ret else "failed"
 
+    async def cancel(self):
+        await self._acp_runtime.cancel()
+
     async def receive_message(self, chat: Chatable, message: ChatMessage):
         channel_id = message.channel_id
         chat_id = message.chat_id

@@ -16,6 +16,9 @@ class CommandReplier(ChatReplyable):
             for command in commands:
                 self.command_center.register(command)
 
+    async def cancel(self):
+        if replier := self._replier:
+            await replier.cancel()
 
     async def receive_message(self, chat: Chatable, message: ChatMessage):
         if (

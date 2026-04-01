@@ -24,7 +24,6 @@ class Chat(Chatable, ChatMessageQueryable):
         self.command_chain = command_chain
         self.inspector = Inspector()
 
-
         for command in self.inspector.list_commands():
             self.command_chain.register(command)
 
@@ -52,6 +51,8 @@ class Chat(Chatable, ChatMessageQueryable):
         _ = message
         now = asyncio.get_running_loop().time()
         self._ignore_until = now + IGNORE_MESSAGE_DURATION_IN_SECONDS
+
+        await self.replier.cancel()
 
     async def _handle_new_message(self, message: ChatMessage):
         if self.ignore_message:

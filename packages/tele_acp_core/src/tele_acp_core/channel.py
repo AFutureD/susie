@@ -1,7 +1,7 @@
 import contextlib
 from abc import abstractmethod
 from datetime import datetime
-from typing import Any, AsyncIterator, Protocol, TypeAlias
+from typing import Any, AsyncIterator, Protocol, Self, TypeAlias
 
 from pydantic import BaseModel
 
@@ -23,7 +23,7 @@ class Channel(Protocol):
         ...
 
     @contextlib.asynccontextmanager
-    async def run_until_finish(self) -> AsyncIterator[Channel]:
+    async def run_until_finish(self) -> AsyncIterator[Self]:
         yield self
 
     @abstractmethod
