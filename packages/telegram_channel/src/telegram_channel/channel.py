@@ -257,7 +257,7 @@ class TelegramChannel(Channel):
                         entities = [entity for entity in entities if isinstance(entity, telethon.types.MessageEntityMention)]
 
                         mentions = map(lambda x: parse_entity_from_text(message.message, x), entities)
-                        return any(username in [mention, mention.removeprefix("@")] for mention in mentions)
+                        return any(username in [mention, mention.removeprefix("@")] for mention in mentions if mention is not None)
 
                     def mentioned_by_userid() -> bool:
                         entities = message.entities or []
@@ -266,7 +266,8 @@ class TelegramChannel(Channel):
 
                     return mentioned_by_username() or mentioned_by_userid()
 
-                if not if_message_mentioned_me():
+                is_me = sender == telethon.types.PeerUser(user_id=me.id)
+                if not (if_message_mentioned_me() or is_me):
                     return False  # In early stage, we are only support mentioned message.
 
                 policy: TelegramChannelGroupPolicy | None = None
