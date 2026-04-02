@@ -4,17 +4,11 @@ from typing import AsyncIterator
 import jinja2
 from tele_acp_core import AgentConfig, Chatable, ChatCommandResponder, ChatMessage, ChatMessagePart, ChatMessageTextPart, Command
 
+from src.tele_acp.constant import SUSIE_MCP_NAME
 from tele_acp.acp import ACPAgentRuntime, AcpMessage
-from tele_acp.constant import SUSIE_MCP_NAME
+from tele_acp.agents import get_agents_dir
 
 PROMPT = (
-    # IMPORTANT. We may move to system instructions but the acp do not support this.
-    "<IMPORTANT>\n"
-    f"always using `{SUSIE_MCP_NAME}` tools when you need to operate on Telegram.\n"
-    "always pass `channel_id={{channel_id}}` to every tool call.\n"
-    "If you want to reply to the message, always call `send_message`, and you may call it multiple times.\n"
-    "</IMPORTANT>\n"
-    "\n"
     # Context Info
     "<CONTEXT>\n"
     "Channel ID: {{channel_id}}\n"
@@ -45,7 +39,19 @@ class AgentReplier(ChatCommandResponder):
         self.logger = logging.getLogger(__name__)
 
     async def new_session(self) -> str:
-        _ = await self._acp_runtime.new_session()
+        session_id = await self._acp_runtime.new_session()
+        self.logger.info(f"new session: {session_id}")
+
+        lib_agent_path = get_agents_dir()
+        env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(lib_agent_path),
+            keep_trailing_newline=True,
+        )
+        template = env.get_template("SYSTEM.md")
+
+        prompt = template.render(SUSIE_MCP_NAME=SUSIE_MCP_NAME)
+        await self._acp_runtime.load_system_instruction(prompt)
+
         return "ok"
 
     async def list_model_opts(self, value: str | None = None) -> str:

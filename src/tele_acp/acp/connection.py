@@ -16,13 +16,11 @@ class ACPAgentConnection:
         self,
         agent_config: ACPAgentConfig,
         cwd: str | Path | None = None,
-        mcp_servers: list[acp.schema.HttpMcpServer | acp.schema.SseMcpServer | acp.schema.McpServerStdio] | None = None,
         on_session_update: Callable[[str, ACPUpdateChunk], Awaitable[None]] | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self._agent_config = agent_config
         self._cwd = str(Path(cwd or Path.cwd()).resolve())
-        self._mcp_servers = mcp_servers
         self._on_session_update = on_session_update
 
         self.logger = logger or logging.getLogger(f"{__name__}.{self.__class__.__name__}:{agent_config.id}")

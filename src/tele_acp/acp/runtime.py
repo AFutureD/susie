@@ -46,7 +46,9 @@ class ACPAgentRuntime(ACPAgentConnection):
         self.logger = logger or logging.getLogger(f"{__name__}.{self.__class__.__name__}:{agent_config.id}")
         self._update_queue: asyncio.Queue[ACPUpdateChunk] | None = None
 
-        super().__init__(agent_config, cwd, mcp_servers, self._handle_session_update)
+        super().__init__(agent_config, cwd, self._handle_session_update)
+
+        self._mcp_servers = mcp_servers
 
         self.id = id
         self._session_id: str | None = None
@@ -70,7 +72,7 @@ class ACPAgentRuntime(ACPAgentConnection):
         return session_id
 
     async def _new_session(self) -> str:
-        if not self.is_active:
+        if self.is_active:
             await self.cancel()
 
         try:
@@ -94,6 +96,16 @@ class ACPAgentRuntime(ACPAgentConnection):
     def is_active(self) -> bool:
         return self._update_queue is not None
 
+    async def load_system_instruction(self, instruction: str):
+        session_id = await self.require_session_id()
+
+        prompt: list[AcpContentBlock] = [acp.text_block(instruction)]
+
+        _ = asyncio.create_task(
+            self.connection.prompt(prompt=prompt, session_id=session_id),
+        )
+        await self.connection.cancel(session_id)
+
     async def prompt(self, parts: list[str]) -> AsyncIterator[AcpMessage]:
         session_id = await self.require_session_id()
 
@@ -115,6 +127,9 @@ class ACPAgentRuntime(ACPAgentConnection):
         self.logger.info("Prompting ACP agent...")
 
         try:
+            # INDICATE THE START OF THE PROMPT TURN
+            yield message
+
             while True:
                 try:
                     update = await update_queue.get()
