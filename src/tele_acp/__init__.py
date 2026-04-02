@@ -1,10 +1,10 @@
 import logging
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
-from pathlib import Path
 
 from .constant import NAME
+from .shared import get_app_user_default_dir
 
-log_dir = Path("./logs/")
+log_dir = get_app_user_default_dir() / "logs"
 log_dir.mkdir(parents=True, exist_ok=True)
 
 log_handler = TimedRotatingFileHandler(log_dir / f"{NAME}.log", when="midnight")
