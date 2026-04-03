@@ -277,9 +277,6 @@ class TelegramChannel(Channel):
                 if policy is None:
                     return False
 
-                if policy.ignore_mention:
-                    return False
-
                 sender_raw_id = peer_id_into_raw_int(sender)
                 sender_chat_id = peer_id_into_chat_id(sender)
 

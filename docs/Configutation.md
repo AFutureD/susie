@@ -14,20 +14,30 @@ Susie's all settings are stored under `~/.config/susie/`.
 api_id = 17349
 api_hash = "344583e45741c457fe1862106095a5eb"
 
+# No channels are configured by default.
 [channels]
 
-# Example: a channel with the id `you_telegram_account_name`
-[channels.you_telegram_account_name]
+# Example: a Telegram user-account channel.
+[channels.my_account]
 type = "telegram_user"
 
 # The session name for the Telegram client. You should not change it.
 session_name = "75d52b5e-3326-4ed1-ab16-fee65a4dbace"
 
-# The whitelist of chat IDs that are allowed access.
-whitelist = []
-
 # Whether users in your contacts are allowed access.
 allow_contacts = true
+
+# Optional: whitelist of allowed users (peer IDs).
+whitelist = []
+
+# Optional: per-group policy. "*" matches all groups.
+[channels.my_account.groups."*"]
+
+# Optional: whitelist of allowed users (peer IDs).
+whitelist = ["*"]
+
+# Weather only response to mentioned messages
+only_mention = true
 
 [[agents]]
 # The ID of the agent.
@@ -36,20 +46,11 @@ id = "default"
 # The ACP client ID used by this agent.
 acp_id = "codex"
 
-# Example:
-# Chat ID used for report messages from this agent.
-forward_to = ""
-
-# Example: the default binding. 
-# [[bindings]]
-# # The ID of the `Agent`
-# agent = "default"
-#
-# # The ID of the `Channel`
-# channel = "you_telegram_account_name"
-#
-# # Optional: only match these chat IDs.
-# # chat_ids = ["123456789", "G987654321"]
+# Example: bind all chats on `my_account` to the default agent.
+[[bindings]]
+channel = "my_account"
+agent = "default"
+chat_ids = ["*"]
 ```
 
 ## 3. FAQ
@@ -85,6 +86,7 @@ type = "telegram_user"
 session_name = "my_account"
 allow_contacts = true
 whitelist = []
+groups."*" = { whitelist = ["*"], only_mention = true }
 ```
 
 Example for a bot channel:
@@ -95,6 +97,7 @@ type = "telegram_bot"
 session_name = "my_bot"
 token = "123456:example-token"
 whitelist = []
+groups."*" = { whitelist = ["*"], only_mention = true }
 ```
 
 Notes:

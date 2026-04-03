@@ -16,7 +16,7 @@ TELEGRAM_PEER_ALL_INDICATOR = "*"
 
 class TelegramChannelGroupPolicy(BaseModel):
     whitelist: list[str] = Field(default=[TELEGRAM_PEER_ALL_INDICATOR], description="The list of allowed users. peer id.")
-    ignore_mention: bool = Field(default=False, description="Whether to treat mentioned as normal message")
+    only_mention: bool = Field(default=True, description="Whether only responses to mentioned messages")
 
 
 class TelegramChannelType(ChannelType, enum.Enum):
