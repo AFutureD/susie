@@ -60,9 +60,16 @@ After you log in to Telegram, this file should already be created for you.
 
 See [Configuration](./docs/Configutation.md) for details.
 
-## TODO
+## Design
 
-- [ ] Command Support
-- [ ] Group Support
-- [ ] Bot Support
-- [ ] Plugin Support
+1. `Chat`: the place where one or more user communicate with agents through channels
+2. `Agent`: the agent that do things by LLMs, for now by acps
+3. `Channel`: the message comes and goes
+4. `Replier`: reponse to the user messages
+5. `Command Chian`: handle user commmand messages
+
+a chat may represent 1-1 or group chat on telegram.
+a chat have mutiple repliers
+a agent replier have a agent behind to it.
+
+the command chain can control chat, the replier, or the global state.
