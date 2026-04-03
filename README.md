@@ -16,7 +16,7 @@ This project lets agents handle Telegram requests on my behalf through my person
 ### 1. Install
 
 ```bash
-uv tool install git+https://github.com/AFutureD/tele-acp
+uv tool install git+https://github.com/AFutureD/susie
 ```
 
 ### 2. Log in to Telegram

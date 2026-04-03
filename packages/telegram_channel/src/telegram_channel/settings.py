@@ -3,7 +3,7 @@ from typing import TypeAlias
 
 from pydantic import BaseModel
 from pydantic.fields import Field
-from tele_acp_core import ChannelSettings, ChannelType
+from susie_core import ChannelSettings, ChannelType
 
 # How to obtain your api_id and api_hash is described here: https://core.telegram.org/api/obtaining_api_id
 # The default values get from here: https://github.com/telegramdesktop/tdesktop/blob/dev/docs/api_credentials.md

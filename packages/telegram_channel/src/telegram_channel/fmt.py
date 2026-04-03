@@ -1,10 +1,10 @@
 import arrow
 import telethon
-from tele_acp_core import SessionInfo
+from susie_core import SessionInfo
 from telethon.tl.tlobject import _json_default
 from telethon.tl.types import TypeAuthorization
 
-from tele_acp.utils.output import get_str_len_for_int
+from susie.utils.output import get_str_len_for_int
 
 
 def json_default_callback(value):

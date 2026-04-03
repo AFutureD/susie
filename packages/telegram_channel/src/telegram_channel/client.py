@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Callable, cast
 
 import telethon
-from tele_acp_core import SessionInfo
+from susie_core import SessionInfo
 from telethon import functions, hints
 from telethon.errors import RPCError
 from telethon.tl.custom import Dialog, Message

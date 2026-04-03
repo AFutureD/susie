@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     # inner
-    "tele-acp-core>=0.1.0",
+    "susie-core>=0.1.0",
     "telegram-channel>=0.1.0",
     # data model
     "pydantic>=2.12.5",
@@ -41,22 +41,22 @@ requires = ["uv_build>=0.9.28,<0.10.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = ["tele_acp"]
+module-name = ["susie"]
 source-exclude = ["tests/**/*"]
 
 [tool.uv.workspace]
 members = [
-    "packages/tele_acp_core",
+    "packages/susie_core",
     "packages/telegram_channel",
 ]
 
 [tool.uv.sources]
-tele-acp = { workspace = true }
-tele-acp-core = { workspace = true }
+susie = { workspace = true }
+susie-core = { workspace = true }
 telegram-channel = { workspace = true }
 
 [project.scripts]
-susie = "tele_acp.cli:cli"
+susie = "susie.cli:cli"
 
 [tool.ruff]
 line-length = 160

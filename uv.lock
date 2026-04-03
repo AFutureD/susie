@@ -4,8 +4,8 @@ requires-python = ">=3.14"
 
 [manifest]
 members = [
+    "susie-core",
     "tele-acp",
-    "tele-acp-core",
     "telegram-channel",
 ]
 
@@ -868,6 +868,17 @@ wheels = [
 ]
 
 [[package]]
+name = "susie-core"
+version = "0.1.0"
+source = { editable = "packages/susie_core" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.12.5" }]
+
+[[package]]
 name = "tele-acp"
 version = "2026.3.0"
 source = { editable = "." }
@@ -880,7 +891,7 @@ dependencies = [
     { name = "mcp" },
     { name = "pydantic" },
     { name = "rich" },
-    { name = "tele-acp-core" },
+    { name = "susie-core" },
     { name = "telegram-channel" },
     { name = "tomlkit" },
     { name = "typer" },
@@ -906,7 +917,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.26.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "rich", specifier = "==14.3.3" },
-    { name = "tele-acp-core", editable = "packages/tele_acp_core" },
+    { name = "susie-core", editable = "packages/susie_core" },
     { name = "telegram-channel", editable = "packages/telegram_channel" },
     { name = "tomlkit", specifier = ">=0.14.0" },
     { name = "typer", specifier = "==0.24.1" },
@@ -923,30 +934,19 @@ dev = [
 ]
 
 [[package]]
-name = "tele-acp-core"
-version = "0.1.0"
-source = { editable = "packages/tele_acp_core" }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.12.5" }]
-
-[[package]]
 name = "telegram-channel"
 version = "0.1.0"
 source = { editable = "packages/telegram_channel" }
 dependencies = [
     { name = "pydantic" },
-    { name = "tele-acp-core" },
+    { name = "susie-core" },
     { name = "telethon" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "tele-acp-core", editable = "packages/tele_acp_core" },
+    { name = "susie-core", editable = "packages/susie_core" },
     { name = "telethon", specifier = ">=1.42.0" },
 ]
 

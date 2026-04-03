@@ -1,10 +1,10 @@
 import uuid
 from pathlib import Path
 
-from tele_acp_core import CurrentSessionPathNotValidError
+from susie_core import CurrentSessionPathNotValidError
 from telethon.sessions import SQLiteSession
 
-from tele_acp.shared import get_app_user_default_dir
+from susie.shared import get_app_user_default_dir
 
 ACTIVATED_SESSION_NAME = "Current"
 
