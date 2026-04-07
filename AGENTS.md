@@ -89,3 +89,7 @@ To list all TODOs that embeded in code files.
 ```bash
 rg --trim "# ?TODO" [PATH ...]
 ```
+
+## 0x05. Task Management
+
+see [task-management](./docs/development/task-management)
