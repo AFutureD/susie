@@ -11,7 +11,7 @@ from telegram_channel import DEFAULT_TELEGRAM_API_HASH, DEFAULT_TELEGRAM_API_ID,
 from tomlkit.exceptions import TOMLKitError
 from tomlkit.items import Table
 
-from .shared import get_app_user_default_dir
+from .shared import get_app_user_config_dir
 
 SUSIE_CHAT_ALL_INDICATOR = "*"
 
@@ -42,7 +42,7 @@ class Config(BaseModel):
 
 
 def get_config_default_path() -> Path:
-    return get_app_user_default_dir() / "config.toml"
+    return get_app_user_config_dir() / "config.toml"
 
 
 def get_config_default() -> Config:

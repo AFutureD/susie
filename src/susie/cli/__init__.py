@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Annotated
 
@@ -8,6 +9,7 @@ import typer
 
 from susie.constant import VERSION
 
+from .acp import acp_cli
 from .auth import auth_cli
 from .mainloop import mainloop
 from .shared import SharedArgs
@@ -33,6 +35,7 @@ cli = typer.Typer(
     """,
 )
 cli.add_typer(auth_cli, name="auth")
+cli.add_typer(acp_cli, name="acp")
 
 
 def _version_callback(value: bool) -> None:
@@ -76,6 +79,7 @@ def main(
     _ = version
 
     ctx.obj = SharedArgs(config_file=config_file, session=session)
+    logging.getLogger().setLevel(logging.WARNING)
 
 
 @cli.command(name="start")

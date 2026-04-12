@@ -10,15 +10,16 @@ from acp.schema import SessionConfigOption, SessionConfigSelectOption
 from susie_core import AgentConfig
 
 from susie.config import Config
-from susie.shared import get_app_user_default_dir
+from susie.shared import get_app_user_config_dir
 
 from .client import ACPAgentConfig, ACPUpdateChunk
 from .connection import ACPAgentConnection
 from .message import AcpContentBlock, AcpMessage
+from .registry import ACPRegisteryManage, ACPRegistryCache
 
 
 def _get_agent_work_folder():
-    ret = get_app_user_default_dir() / "workspace"
+    ret = get_app_user_config_dir() / "workspace"
     ret.mkdir(parents=True, exist_ok=True)
     return ret
 
@@ -250,17 +251,19 @@ class ACPRuntimeHub:
     def __init__(
         self,
         config: Config,
+        acp_registry: ACPRegistryCache,
         mcp_servers: list[acp.schema.HttpMcpServer | acp.schema.SseMcpServer | acp.schema.McpServerStdio] | None = None,
     ) -> None:
         self._config = config
         self._stack: contextlib.AsyncExitStack | None = None
         self._mcp_servers = mcp_servers
         self._runtimes: dict[str, ACPAgentRuntime] = {}
+        self._acp_manager = ACPRegisteryManage(acp_registry)
 
     async def spawn_acp_runtime(self, agent: AgentConfig) -> ACPAgentRuntime:
         assert self._stack is not None
 
-        acp_config = self.get_acp_config(agent.acp_id)
+        acp_config = await self.get_acp_config(agent.acp_id)
         assert acp_config is not None, "acp agent not found"
 
         id = str(uuid.uuid4())
@@ -270,17 +273,9 @@ class ACPRuntimeHub:
 
         return runtime
 
-    def get_acp_config(self, agent_id: str) -> ACPAgentConfig | None:
-        # hard-coded agents used during development
-        _acp_agents: dict[str, ACPAgentConfig] = {
-            agent.id: agent
-            for agent in [
-                ACPAgentConfig("codex", "Codex", "codex-acp", []),
-                ACPAgentConfig("kimi", "Kimi CLI", "kimi", ["acp"]),
-            ]
-        }
-
-        return _acp_agents.get(agent_id)
+    async def get_acp_config(self, agent_id: str) -> ACPAgentConfig | None:
+        acp = await self._acp_manager.get_agent_config(agent_id)
+        return acp
 
     def get_runtime(self, id: str) -> ACPAgentRuntime | None:
         return self._runtimes.get(id)
