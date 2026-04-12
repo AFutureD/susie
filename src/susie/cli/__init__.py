@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Annotated
 
@@ -78,6 +79,7 @@ def main(
     _ = version
 
     ctx.obj = SharedArgs(config_file=config_file, session=session)
+    logging.getLogger().setLevel(logging.WARNING)
 
 
 @cli.command(name="start")
