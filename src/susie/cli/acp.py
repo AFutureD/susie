@@ -71,15 +71,12 @@ def _render_status_table(title: str, rows: Sequence[tuple[ACPRegistryAgent, ACPR
     console.print(table)
 
 
-def _exit_with_error(message: str) -> None:
-    console.print(f"[red]{message}[/red]")
-    raise typer.Exit(code=1)
-
-
 @acp_cli.command("list", help="List all ACP agents and their current status.")
 def acp_list(
     refresh: Annotated[bool, typer.Option("--refresh", help="Refresh the cached ACP registry before listing.")] = False,
 ) -> None:
+    rows: list[tuple[ACPRegistryAgent, ACPRegisteryStatus]] = []
+
     async def _run() -> list[tuple[ACPRegistryAgent, ACPRegisteryStatus]]:
         manager, registry = await _prepare_manager(refresh)
         statuses = await manager.list_acp_status()
@@ -88,7 +85,8 @@ def acp_list(
     try:
         rows = asyncio.run(_run())
     except RuntimeError as exc:
-        _exit_with_error(str(exc))
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1)
 
     _render_status_table("ACP Agents", rows)
 
@@ -98,6 +96,8 @@ def acp_search(
     query: Annotated[str, typer.Argument(help="Search text matched against acp-id and name.")],
     refresh: Annotated[bool, typer.Option("--refresh", help="Refresh the cached ACP registry before searching.")] = False,
 ) -> None:
+    rows: list[tuple[ACPRegistryAgent, ACPRegisteryStatus]] = []
+
     async def _run() -> list[tuple[ACPRegistryAgent, ACPRegisteryStatus]]:
         manager, registry = await _prepare_manager(refresh)
         statuses = await manager.list_acp_status()
@@ -108,7 +108,8 @@ def acp_search(
     try:
         rows = asyncio.run(_run())
     except RuntimeError as exc:
-        _exit_with_error(str(exc))
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1)
 
     if not rows:
         console.print(f"No ACP agents matched `{query}`.")
@@ -129,7 +130,8 @@ def acp_install(
     try:
         asyncio.run(_run())
     except RuntimeError as exc:
-        _exit_with_error(str(exc))
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1)
 
     console.print(f"Installed ACP agent `{acp_id}`.")
 
@@ -139,6 +141,8 @@ def acp_update(
     acp_id: Annotated[str | None, typer.Argument(help="Optional ACP registry id to update.")] = None,
     refresh: Annotated[bool, typer.Option("--refresh", help="Refresh the cached ACP registry before update.")] = False,
 ) -> None:
+    updated: list[str] = []
+
     async def _run() -> list[str]:
         manager, _ = await _prepare_manager(refresh)
         targets: list[str]
@@ -157,7 +161,8 @@ def acp_update(
     try:
         updated = asyncio.run(_run())
     except RuntimeError as exc:
-        _exit_with_error(str(exc))
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1)
 
     if not updated:
         console.print("No installed ACP agents to update.")
@@ -178,6 +183,7 @@ def acp_uninstall(
     try:
         asyncio.run(_run())
     except RuntimeError as exc:
-        _exit_with_error(str(exc))
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1)
 
     console.print(f"Uninstalled ACP agent `{acp_id}`.")
