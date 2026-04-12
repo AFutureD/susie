@@ -59,13 +59,15 @@ Meta JSON Schema
 * Related: [000000T0000-task-template](../000000T0000-task-template)
 
 
-## Content
+## Guidelines
 
-Use this section to describe the task in as much detail as needed.
+### Content
+
+Use this file to describe the outcome you want, rather than the implementation steps.
+
+Describe the task in as much detail as necessary.
 
 You may place related assets in the task folder.
-
-## Guidelines
 
 ### Links
 
