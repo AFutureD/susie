@@ -27,8 +27,8 @@ class APP:
         # Layer One: IO
         _ = mcp_server
         _ = command_chain
-        acp_hub = ACPRuntimeHub(config, mcp_servers=[builtin_mcp])
-        acp_registery = ACPRegistryCache()
+        acp_registry = ACPRegistryCache()
+        acp_hub = ACPRuntimeHub(config, acp_registry, mcp_servers=[builtin_mcp])
 
         # Layer Two: The Data Process
         replier_hub = ChatReplierHub(config, acp_hub)
@@ -54,7 +54,7 @@ class APP:
         self._replier_hub = replier_hub
         self._acp_hub = acp_hub
         self._mcp_server: MCP = mcp_server
-        self._acp_registery = acp_registery
+        self._acp_registery = acp_registry
 
         self._shutdown = asyncio.Event()
 
