@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import logging
 from datetime import datetime
 from typing import AsyncIterator, Awaitable, Callable, Self
@@ -6,8 +7,10 @@ from typing import AsyncIterator, Awaitable, Callable, Self
 import telethon
 import telethon.hints
 from susie_core import Channel, ChatInfo, ChatMessage, ChatMessageFilePart, ChatMessagePart, ChatMessageTextPart, unreachable
+from telethon.extensions import markdown as telegram_markdown
 from telethon.tl.custom import Message as TeleMessage
 from telethon.tl.custom.dialog import Dialog as TeleDialog
+from telethon.types import MessageEntityBlockquote, TypeMessageEntity
 
 from .client import TGClient
 from .settings import TELEGRAM_PEER_ALL_INDICATOR, TelegramChannelGroupPolicy, TelegramUserChannel, TypeTelegramChannel
@@ -94,6 +97,47 @@ def convert_telegram_message_to_chat_message(
 type MessageHandler = Callable[[ChatMessage], Awaitable[None]]
 
 
+def render_telegram_rich_text_sections(sections: list[dict[str, str]]) -> tuple[str, list[TypeMessageEntity]]:
+    text_parts: list[str] = []
+    entities: list[TypeMessageEntity] = []
+    offset = 0
+
+    for section in sections:
+        section_text = str(section.get("text", "")).strip()
+        if section_text == "":
+            continue
+
+        if text_parts:
+            text_parts.append("\n\n")
+            offset += 2
+
+        text_type = section.get("text_type", "plain")
+        if text_type == "markdown":
+            clean_text, section_entities = telegram_markdown.parse(section_text)
+        else:
+            clean_text, section_entities = section_text, []
+
+        if clean_text == "":
+            continue
+
+        section_offset = offset
+        text_parts.append(clean_text)
+
+        for entity in section_entities:
+            shifted = copy.copy(entity)
+            shifted.offset += section_offset
+            entities.append(shifted)
+
+        if text_type == "expandable_blockquote":
+            entities.append(MessageEntityBlockquote(offset=section_offset, length=len(clean_text), collapsed=True))
+
+        offset += len(clean_text)
+
+    entities.sort(key=lambda entity: (entity.offset, -entity.length))
+
+    return "".join(text_parts), entities
+
+
 class TelegramChannel(Channel):
     """
     屏蔽 telethon 对 APP 的细节
@@ -139,13 +183,24 @@ class TelegramChannel(Channel):
 
     async def send_message(self, message: ChatMessage):
         files: list[telethon.hints.FileLike] = [part.path for part in message.parts if isinstance(part, ChatMessageFilePart)]
-        texts = [part.text for part in message.parts if isinstance(part, ChatMessageTextPart)]
-        content = "\n".join(texts)
+        rich_text_sections = message.meta.get("rich_text_sections")
+
+        if isinstance(rich_text_sections, list) and all(isinstance(item, dict) for item in rich_text_sections):
+            content, formatting_entities = render_telegram_rich_text_sections(rich_text_sections)
+        else:
+            texts = [part.text for part in message.parts if isinstance(part, ChatMessageTextPart)]
+            content = "\n".join(texts)
+            formatting_entities = message.meta.get("telegram_entities")
 
         receiver = message.receiver or message.chat_id
         peer_id = chat_id_into_peer_id(receiver)
 
-        await self._tele_client.send_message(peer_id, message=content, file=files if len(files) > 0 else None)
+        await self._tele_client.send_message(
+            peer_id,
+            message=content,
+            formatting_entities=formatting_entities if isinstance(formatting_entities, list) else None,
+            file=files if len(files) > 0 else None,
+        )
         self.logger.info(f"send_message: {message}")
 
     async def receive_message(self, message: ChatMessage):
